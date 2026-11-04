@@ -195,7 +195,7 @@ async function chat(req, res) {
   send(res, 200, { text: String(out.result ?? ''), sessionId: out.session_id })
 }
 
-function middleware(req, res, next) {
+export function middleware(req, res, next) {
   const url = req.url?.split('?')[0]
   // Nur Anfragen von dieser Seite selbst annehmen (Schutz vor fremden Webseiten)
   const origin = req.headers.origin

@@ -1,0 +1,28 @@
+﻿Labreporthelp für Windows
+=========================
+
+So startest du:
+
+1. Die ZIP-Datei entpacken: Rechtsklick auf die ZIP-Datei, "Alle extrahieren",
+   z. B. nach "Dokumente". Bitte wirklich entpacken, nicht nur hineinschauen.
+2. Im entpackten Ordner "Labreporthelp starten.bat" doppelklicken.
+   Falls Windows "Der Computer wurde durch Windows geschützt" meldet:
+   "Weitere Informationen" und dann "Trotzdem ausführen".
+3. Beim ersten Start wird einmalig eingerichtet (dauert ein paar Minuten):
+   Git und Claude Code werden installiert, dann öffnet sich der Browser
+   und du meldest dich mit deinem Claude-Konto an (Pro oder Max).
+   Auf dem Desktop liegt danach die Verknüpfung "Labreporthelp".
+4. Danach öffnet sich Labreporthelp im Browser. Das schwarze Fenster offen
+   lassen, solange du arbeitest. Zum Beenden das Fenster schließen.
+
+Ab jetzt startest du immer über die Desktop-Verknüpfung oder
+"Labreporthelp starten.bat".
+
+Neu bei Claude anmelden: "Einrichtung wiederholen.bat" doppelklicken.
+
+Deine Dokumente: "Speichern" legt eine Datei zum Weiterbearbeiten an.
+"Drucken / PDF" öffnet den Druckdialog; als Drucker "Microsoft Print to PDF"
+wählen, um ein PDF zu bekommen.
+
+Neue Version: Die neue ZIP-Datei von GitHub (Releases) entpacken und den
+alten Ordner löschen. Deine gespeicherten Dokumente sind davon nicht betroffen.

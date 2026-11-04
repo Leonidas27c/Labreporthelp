@@ -1,0 +1,36 @@
+name: Release (Windows-Paket)
+
+# Neues Release: einen Tag wie v0.1.0 pushen. Dann wird das Windows-Paket gebaut
+# und als "Labreporthelp-windows.zip" an das Release auf GitHub gehängt.
+# Von Hand gestartet (Actions → Run workflow) wird nur das Paket gebaut, ohne Release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  paket:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: bash scripts/package-release.sh release-out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Labreporthelp-windows
+          path: release-out/Labreporthelp-windows.zip
+      - name: Release anlegen
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release-out/Labreporthelp-windows.zip \
+            --title "Labreporthelp $GITHUB_REF_NAME" \
+            --notes-file release/RELEASE_NOTES.md
