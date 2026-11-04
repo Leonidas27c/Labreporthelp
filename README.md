@@ -16,7 +16,7 @@ Ein Schreibprogramm für Laborprotokolle und wissenschaftliche Arbeiten: wie Wor
 - Beim Loslassen erscheint ein Menü: „Diagramm“ oder „Tabelle“ (Esc bricht ab)
 - Das Diagramm füllt genau das gezogene Feld: kariert, mit x- und y-Achse
 - Am Griff unten rechts lässt sich das Feld größer ziehen, das Raster wächst mit
-- „Tabelle“ ist vorerst ein Platzhalter
+- „Tabelle“ fügt eine echte Tabelle in der gezogenen Größe ein
 
 **Schritt 3 – Diagramm formatieren** (fertig)
 - Diagramm anklicken → rechts öffnet sich „Diagramm formatieren“ (wie in Word)
@@ -71,8 +71,19 @@ Einrichtung (einmalig):
 - „Drucken / PDF“ (Strg+P) druckt nur das Dokument im A4-Format mit Seitenrändern, ohne Adresse und Datum am Rand
 - Gestrichelte Linien im Editor zeigen, wo beim Drucken eine neue Seite beginnt
 
-**Tabellen**
-- „Aufziehen“ → „Tabelle“ fügt jetzt eine echte Tabelle mit Kopfzeile ein (Größe passend zum Feld)
+**Tabellen** (wie Diagramme: beweglich und mit Eigenschaften)
+- „Aufziehen“ → „Tabelle“ fügt eine echte Tabelle mit Kopfzeile ein (Größe passend zum Feld)
+- Griff ✥ oben links: Tabelle verschieben (nach links/rechts und an eine andere Stelle im Text)
+- Griff unten rechts: Tabelle größer/kleiner ziehen, Spalten wachsen gleichmäßig mit
+- Linie zwischen zwei Spalten ziehen: einzelne Spalte breiter/schmaler
+- In die Tabelle klicken → rechts öffnet sich „Tabelle formatieren“:
+  - Beschriftung („Tabelle 1: …“) über oder unter der Tabelle, sie wandert beim Verschieben mit
+  - Zeilen und Spalten (Anzahl, einfügen, löschen, Zellen verbinden), Kopfzeile an/aus
+  - Pro Spalte: Größe und Einheit (geschrieben als „t [s]“, „t / s“ oder „t in s“), Ausrichtung, Breite
+  - Linien: Gitter, nur waagerecht, wissenschaftlich (3 Linien), nur Rahmen oder keine; Stärke und Farbe
+  - Farben: Kopfzeile, jede zweite Zeile einfärben; Schriftgröße
+  - Größe und Lage: Breite, Zeilenhöhe, Abstand vom Rand, zentrieren, auf Seitenbreite
+- Alte Dateien mit Tabellen-Platzhalter werden beim Öffnen automatisch in echte Tabellen umgewandelt
 
 **Als Nächstes**
 4. Desktop-App für PC und Laptop
@@ -133,7 +144,10 @@ um ein PDF zu bekommen.
   - `src/components/ChartView.tsx`, `src/extensions/ChartNode.ts` – Diagrammfeld
   - `src/components/ChartPanel.tsx` – Seitenleiste „Diagramm formatieren“
   - `src/lib/chartModel.ts` – Einstellungen und Berechnung der Abschnitte
-  - `src/components/TablePlaceholderView.tsx`, `src/extensions/TablePlaceholderNode.ts` – Tabellen-Platzhalter
+  - `src/extensions/LabTable.ts` – Tabelle mit Griffen zum Verschieben und Vergrößern
+  - `src/components/TablePanel.tsx` – Seitenleiste „Tabelle formatieren“
+  - `src/lib/tableModel.ts` – Einstellungen der Tabelle und Hilfen zum Umbauen
+  - `src/extensions/TablePlaceholderNode.ts` – wandelt alte Tabellen-Platzhalter um
   - `src/lib/documentFile.ts` – Speichern/Öffnen
   - `src/components/ChatPanel.tsx` – Chat mit Claude
   - `src/lib/aboChat.ts` – Chat-Anfrage aus der App

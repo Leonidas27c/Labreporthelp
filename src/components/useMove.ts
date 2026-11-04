@@ -1,14 +1,14 @@
 import { useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
 import { NodeSelection } from '@tiptap/pm/state'
-import { contentWidth, insertPosition } from '../lib/insertPosition'
+import { moveBlock } from '../lib/moveBlock'
 
 /**
  * Feld mit gedrückter Maustaste verschieben: waagerecht ändert den Abstand
  * vom linken Rand, senkrecht die Stelle im Text. Ein einfacher Klick wählt
  * das Feld nur aus.
  */
-export function useMove(editor: Editor, getPos: () => number | undefined, offsetX: number, width: number) {
+export function useMove(editor: Editor, getPos: () => number | undefined, width: number) {
   const [delta, setDelta] = useState<{ dx: number; dy: number } | null>(null)
   const start = useRef<{ x: number; y: number; top: number } | null>(null)
 
@@ -46,29 +46,7 @@ export function useMove(editor: Editor, getPos: () => number | undefined, offset
 
     const pos = getPos()
     if (typeof pos !== 'number') return
-    const { state, view } = editor
-    const node = state.doc.nodeAt(pos)
-    if (!node) return
-
-    const maxW = contentWidth(view.dom)
-    const newOffset = Math.round(Math.min(Math.max(offsetX + delta.dx, 0), Math.max(0, maxW - width)))
-    const pageBox = view.dom.getBoundingClientRect()
-    const padLeft = parseFloat(getComputedStyle(view.dom).paddingLeft)
-    const target = insertPosition(editor, s.top + delta.dy, pageBox.left + padLeft + 1)
-
-    const attrs = { ...node.attrs, offsetX: newOffset }
-    let tr = state.tr
-    let newPos = pos
-    if (target < pos || target > pos + node.nodeSize) {
-      // an eine andere Stelle im Text verschieben
-      tr = tr.delete(pos, pos + node.nodeSize)
-      newPos = tr.mapping.map(target)
-      tr = tr.insert(newPos, node.type.create(attrs))
-    } else {
-      tr = tr.setNodeMarkup(pos, undefined, attrs)
-    }
-    tr = tr.setSelection(NodeSelection.create(tr.doc, newPos))
-    view.dispatch(tr)
+    moveBlock(editor, pos, width, delta.dx, delta.dy, s.top)
   }
 
   return {

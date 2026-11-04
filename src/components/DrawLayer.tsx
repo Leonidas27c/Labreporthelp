@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
+import { TextSelection } from '@tiptap/pm/state'
 import { contentWidth, insertPosition } from '../lib/insertPosition'
+import { emptyTable } from '../lib/tableModel'
 
 interface Rect {
   x: number
@@ -96,10 +98,17 @@ export function DrawLayer({ editor, active, onDone }: DrawLayerProps) {
     const node =
       type === 'chart'
         ? { type, attrs: { width, height: Math.round(rect.h), offsetX } }
-        : emptyTable(Math.max(2, Math.round(width / 110)), Math.max(2, Math.round(rect.h / 32)))
+        : emptyTable(Math.max(2, Math.round(width / 110)), Math.max(2, Math.round(rect.h / 32)), {
+            width,
+            height: Math.round(rect.h),
+            offsetX,
+          })
     editor
       .chain()
       .insertContentAt(pos, [node, ...(atEnd ? [{ type: 'paragraph' }] : [])])
+      // Bei der Tabelle gleich in die erste Zelle springen, dann erscheint „Tabelle formatieren“
+      .command(({ tr }) => (type === 'table' ? (tr.setSelection(TextSelection.create(tr.doc, pos + 4)), true) : true))
+      .focus()
       .run()
     reset()
     onDone()
@@ -131,18 +140,6 @@ export function DrawLayer({ editor, active, onDone }: DrawLayerProps) {
       )}
     </div>
   )
-}
-
-/** Leere Tabelle mit Kopfzeile in der ungefähr aufgezogenen Größe. */
-function emptyTable(cols: number, rows: number) {
-  const cell = (type: string) => ({ type, content: [{ type: 'paragraph' }] })
-  return {
-    type: 'table',
-    content: Array.from({ length: rows }, (_, r) => ({
-      type: 'tableRow',
-      content: Array.from({ length: cols }, () => cell(r === 0 ? 'tableHeader' : 'tableCell')),
-    })),
-  }
 }
 
 function clamp(v: number, min: number, max: number) {

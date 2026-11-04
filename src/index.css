@@ -86,28 +86,21 @@ html, body, #root { margin: 0; height: 100%; }
   background: var(--text); color: #fff; padding: 2px 6px; border-radius: 4px; pointer-events: none;
 }
 
-/* ---------- Diagramm und Tabellen-Platzhalter ---------- */
-.chart-node, .table-placeholder { position: relative; margin-top: 6pt; margin-bottom: 6pt; }
-.chart-node.selected, .table-placeholder.selected { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* ---------- Diagramm ---------- */
+.chart-node { position: relative; margin-top: 6pt; margin-bottom: 6pt; }
+.chart-node.selected { outline: 2px solid var(--accent); outline-offset: 2px; }
 .chart-svg { display: block; background: #fff; }
 .axis-label { font: 12px system-ui, sans-serif; fill: var(--text); }
-.table-placeholder {
-  display: flex; align-items: center; justify-content: center;
-  border: 1.5px dashed var(--border); color: var(--muted); font: 14px system-ui, sans-serif;
-  background: repeating-linear-gradient(0deg, transparent 0 29px, var(--border) 29px 30px);
-}
 .resize-handle {
   position: absolute; right: -5px; bottom: -5px; width: 12px; height: 12px;
   background: var(--surface); border: 2px solid var(--accent); border-radius: 3px;
   cursor: nwse-resize; opacity: 0; touch-action: none;
 }
-.chart-node:hover .resize-handle, .chart-node.selected .resize-handle, .chart-node.resizing .resize-handle,
-.table-placeholder:hover .resize-handle, .table-placeholder.selected .resize-handle,
-.table-placeholder.resizing .resize-handle { opacity: 1; }
+.chart-node:hover .resize-handle, .chart-node.selected .resize-handle, .chart-node.resizing .resize-handle { opacity: 1; }
 
 /* Text im Diagramm nicht markierbar/ziehbar, Feld per Maus verschiebbar */
-.chart-node, .table-placeholder { user-select: none; -webkit-user-select: none; cursor: move; touch-action: none; }
-.chart-node.moving, .table-placeholder.moving { opacity: 0.75; z-index: 5; }
+.chart-node { user-select: none; -webkit-user-select: none; cursor: move; touch-action: none; }
+.chart-node.moving { opacity: 0.75; z-index: 5; }
 .tick-label text { font: 11px system-ui, sans-serif; fill: var(--text); }
 
 /* ---------- Seitenleiste „Diagramm formatieren“ ---------- */
@@ -148,11 +141,57 @@ html, body, #root { margin: 0; height: 100%; }
 }
 
 /* ---------- Tabellen ---------- */
-.page table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; table-layout: fixed; }
-.page th, .page td { border: 1px solid #8d9bb3; padding: 3pt 6pt; vertical-align: top; min-width: 40px; }
-.page th { background: #eef2f8; font-weight: 600; text-align: left; }
+.page table { border-collapse: collapse; width: 100%; margin: 0; table-layout: fixed; }
+.page th, .page td { padding: 3pt 6pt; vertical-align: top; min-width: 40px; position: relative; }
+.page th { font-weight: 600; text-align: left; }
 .page td p, .page th p { margin: 0; }
-.page .selectedCell { background: var(--accent-soft); }
+.page .selectedCell { background: var(--accent-soft) !important; }
+
+.lab-table { position: relative; margin: 6pt 0 10pt; max-width: 100%; }
+.lab-table-frame { position: relative; }
+.lab-table th, .lab-table td { height: var(--tbl-row-h, auto); font-size: var(--tbl-font, inherit); border: 0; }
+.lab-table th { background: var(--tbl-head, transparent); }
+.lab-table.striped tbody > tr:nth-child(even) > td { background: var(--tbl-stripe); }
+.lab-table.borders-all th, .lab-table.borders-all td { border: var(--tbl-line-w) solid var(--tbl-line); }
+.lab-table.borders-rows th, .lab-table.borders-rows td { border-top: var(--tbl-line-w) solid var(--tbl-line); border-bottom: var(--tbl-line-w) solid var(--tbl-line); }
+.lab-table.borders-booktabs table { border-top: calc(var(--tbl-line-w) * 1.6) solid var(--tbl-line); border-bottom: calc(var(--tbl-line-w) * 1.6) solid var(--tbl-line); }
+.lab-table.borders-booktabs tr:first-child > * { border-bottom: var(--tbl-line-w) solid var(--tbl-line); }
+.lab-table.borders-outer table { border: var(--tbl-line-w) solid var(--tbl-line); }
+/* Ohne Linien: im Editor feine Hilfslinien, die nicht mitgedruckt werden */
+#root .lab-table.borders-none td, #root .lab-table.borders-none th,
+#root .lab-table.borders-outer td, #root .lab-table.borders-outer th { outline: 1px dashed #dfe4ec; outline-offset: -1px; }
+.lab-table.selected .lab-table-frame { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lab-table.moving { opacity: 0.75; z-index: 5; }
+.table-caption { font-size: 11pt; margin: 0 0 4pt; user-select: none; }
+.table-caption.below { margin: 4pt 0 0; }
+.table-grip {
+  position: absolute; left: -26px; top: -2px; width: 20px; height: 20px; display: grid; place-items: center;
+  font: 13px system-ui, sans-serif; color: var(--accent); background: var(--surface);
+  border: 1.5px solid var(--accent); border-radius: 4px; cursor: move; opacity: 0; touch-action: none; user-select: none;
+}
+.lab-table:hover .table-grip, .lab-table.selected .table-grip, .lab-table:focus-within .table-grip, .lab-table.moving .table-grip { opacity: 1; }
+.lab-table:hover .resize-handle, .lab-table.selected .resize-handle, .lab-table:focus-within .resize-handle, .lab-table.resizing .resize-handle { opacity: 1; }
+.lab-table .size-badge { position: absolute; right: 0; bottom: -26px; }
+.page .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: -2px; width: 4px; background: var(--accent); pointer-events: none; z-index: 3; }
+.page.resize-cursor { cursor: col-resize; }
+
+/* Seitenleiste: Tabelle */
+.side-panel .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.side-panel .button-grid button {
+  font: inherit; font-size: 12px; padding: 5px 6px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); cursor: pointer; color: var(--text);
+}
+.side-panel .button-grid button:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); }
+.side-panel .button-grid button:disabled { opacity: 0.45; cursor: default; }
+.segmented.small button { font-size: 12px; padding: 6px 2px; white-space: nowrap; }
+.stepper { display: flex; gap: 4px; }
+.stepper button { width: 28px; flex-shrink: 0; font: inherit; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); cursor: pointer; }
+.stepper button:disabled { opacity: 0.4; cursor: default; }
+.stepper input { text-align: center; }
+.color-row { display: flex; flex-direction: column; gap: 4px; }
+.color-row .swatches { grid-template-columns: repeat(9, 1fr); }
+.color-row .swatch.none { background: linear-gradient(135deg, #fff 45%, #d33 45% 55%, #fff 55%); }
+.color-row input[type="color"] { width: 100%; aspect-ratio: 1; height: auto; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: none; cursor: pointer; }
 
 /* ---------- Claude-Chat ---------- */
 .toolbar .push-right { margin-left: auto; border-left: 0 !important; }
@@ -270,7 +309,9 @@ html, body, #root { margin: 0; height: 100%; }
   .print-bottom { height: 25mm; }
   .print-body { padding: 0 20mm !important; }
   #print-root .page { box-shadow: none !important; width: auto !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; }
-  #print-root .resize-handle, #print-root .size-badge { display: none !important; }
+  #print-root .resize-handle, #print-root .size-badge, #print-root .table-grip, #print-root .column-resize-handle { display: none !important; }
+  #print-root .lab-table-frame { outline: none !important; }
+  #print-root .page .selectedCell { background: inherit !important; }
   #print-root .chart-node { outline: none !important; box-shadow: none !important; break-inside: avoid; }
   #print-root .page table { break-inside: auto; }
   #print-root .page tr, #print-root .page h1, #print-root .page h2, #print-root .page h3 { break-inside: avoid; }

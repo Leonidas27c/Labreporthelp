@@ -54,6 +54,7 @@ export class DocumentTools {
           lines.push(`${'#'.repeat(node.attrs.level)} ${node.textContent}`)
           break
         case 'table':
+          if (node.attrs.caption) lines.push(String(node.attrs.caption))
           node.forEach((row) => {
             const cells: string[] = []
             row.forEach((cell) => cells.push(cell.textContent.replace(/\|/g, '/')))
@@ -78,6 +79,7 @@ export class DocumentTools {
   }
 
   insertTable(input: { caption: string; headers: string[]; rows: string[][] }) {
+    input = { caption: input.caption ?? '', headers: input.headers ?? [], rows: input.rows ?? [] }
     const cols = Math.max(input.headers.length, ...input.rows.map((r) => r.length), 1)
     const cell = (type: 'tableHeader' | 'tableCell', text: string): JSONContent => ({
       type,
@@ -86,17 +88,14 @@ export class DocumentTools {
     const pad = (r: string[]) => Array.from({ length: cols }, (_, i) => String(r[i] ?? ''))
     const table: JSONContent = {
       type: 'table',
+      // Die Beschriftung gehört zur Tabelle und wandert beim Verschieben mit
+      attrs: { caption: (input.caption ?? '').trim() },
       content: [
         { type: 'tableRow', content: pad(input.headers).map((t) => cell('tableHeader', t)) },
         ...input.rows.map((r) => ({ type: 'tableRow', content: pad(r).map((t) => cell('tableCell', t)) })),
       ],
     }
-    const content: JSONContent[] = []
-    if (input.caption.trim()) {
-      content.push({ type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'bold' }], text: input.caption.trim() }] })
-    }
-    content.push(table)
-    this.insert(content)
+    this.insert([table])
     return `Tabelle mit ${cols} Spalten und ${input.rows.length} Zeilen eingefügt.`
   }
 
