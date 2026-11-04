@@ -68,7 +68,8 @@ Einrichtung (einmalig):
 - Zwei Paletten: „Wissenschaft klassisch“ (gedeckte, dunkle Töne) und „Okabe-Ito“ (auch bei Farbsehschwäche unterscheidbar), dazu eigene Farben
 
 **Drucken und PDF**
-- „Drucken / PDF“ (Strg+P) druckt nur die Seite, ohne Werkzeugleiste, im A4-Format mit Seitenrändern
+- „Drucken / PDF“ (Strg+P) druckt nur das Dokument im A4-Format mit Seitenrändern, ohne Adresse und Datum am Rand
+- Gestrichelte Linien im Editor zeigen, wo beim Drucken eine neue Seite beginnt
 
 **Tabellen**
 - „Aufziehen“ → „Tabelle“ fügt jetzt eine echte Tabelle mit Kopfzeile ein (Größe passend zum Feld)

@@ -7,6 +7,8 @@ import { TableKit } from '@tiptap/extension-table'
 import { TextStyle, Color } from '@tiptap/extension-text-style'
 import Highlight from '@tiptap/extension-highlight'
 import { Toolbar } from './components/Toolbar'
+import { PageBreaks } from './components/PageBreaks'
+import { printDocument } from './lib/print'
 import { DrawLayer } from './components/DrawLayer'
 import { ChartPanel } from './components/ChartPanel'
 import { ChatPanel } from './components/ChatPanel'
@@ -97,14 +99,7 @@ export default function App() {
     if (!editor) return
     // Auswahl aufheben, damit kein Auswahlrahmen mitgedruckt wird
     editor.commands.setTextSelection(editor.state.selection.to)
-    const previous = document.title
-    document.title = title || 'Labreporthelp' // wird als Dateiname für das PDF vorgeschlagen
-    const restore = () => {
-      document.title = previous
-      window.removeEventListener('afterprint', restore)
-    }
-    window.addEventListener('afterprint', restore)
-    window.setTimeout(() => window.print(), 50)
+    window.setTimeout(() => printDocument(editor.view.dom as HTMLElement, title), 50)
   }, [editor, title])
 
   // Tastenkürzel Strg+S, Strg+O und Strg+P
@@ -178,6 +173,7 @@ export default function App() {
       <main className="workspace">
         <div className={`page-wrap${drawing ? ' drawing' : ''}`}>
           <EditorContent editor={editor} />
+          <PageBreaks editor={editor} />
           <DrawLayer editor={editor} active={drawing} onDone={stopDrawing} />
         </div>
         {drawing && <div className="hint">Feld mit gedrückter linker Maustaste aufziehen · Esc zum Abbrechen</div>}
