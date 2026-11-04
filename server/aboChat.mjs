@@ -12,6 +12,26 @@ const WORK_DIR = join(tmpdir(), 'labreporthelp-chat')
 const MODELS = new Set(['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1'])
 const TIMEOUT_MS = 5 * 60 * 1000
 
+// Festes Antwortformat: Claude Code prüft die Antwort gegen dieses Schema, so ist das JSON immer gültig
+const SCHEMA = JSON.stringify({
+  type: 'object',
+  properties: {
+    reply: { type: 'string' },
+    actions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          tool: { type: 'string', enum: ['insert_text', 'insert_table', 'insert_chart'] },
+          input: { type: 'object' },
+        },
+        required: ['tool', 'input'],
+      },
+    },
+  },
+  required: ['reply', 'actions'],
+})
+
 const SYSTEM_PROMPT = `Du bist der Schreibassistent in „Labreporthelp“, einem Textprogramm für Laborprotokolle und wissenschaftliche Arbeiten.
 Die Person schreibt gerade ein Dokument und bittet dich im Chat um Hilfe. Mit jeder Nachricht bekommst du den aktuellen Dokumentinhalt.
 
@@ -21,15 +41,15 @@ So arbeitest du:
 - Tabellen: sinnvolle Spaltenköpfe mit Einheit in eckigen Klammern, z. B. „Zeit t [s]“. Zahlen im deutschen Format mit Komma. Erfinde keine Messwerte; wenn Werte fehlen, lege leere Zellen an.
 - Diagrammfelder sind leere Koordinatensysteme (Millimeterpapier) zum Einzeichnen. Messpunkte kann das Programm noch nicht zeichnen; sag das kurz, falls danach gefragt wird. Wähle Achsenbereiche, die zu den Daten passen.
 
-Antwortformat:
-Schreib zuerst ein bis drei kurze Sätze auf Deutsch. Wenn etwas eingefügt werden soll, hänge danach GENAU EINEN Block an, der so beginnt: \`\`\`labreporthelp
-und eine JSON-Liste von Aktionen enthält, in der Reihenfolge, in der sie eingefügt werden sollen:
-[
-  {"tool": "insert_text", "input": {"blocks": [{"style": "heading1|heading2|heading3|paragraph|bullet", "text": "..."}]}},
-  {"tool": "insert_table", "input": {"caption": "Tabelle 1: ... (oder leer)", "headers": ["..."], "rows": [["...", "..."]]}},
-  {"tool": "insert_chart", "input": {"x_label": "...", "x_unit": "...", "x_start": 0, "x_max": 10, "y_label": "...", "y_unit": "...", "y_start": 0, "y_max": 50, "background": "grid|dots|blank", "width": 500, "height": 350}}
-]
-Alle Felder sind Pflicht. width üblich 300–600, height 250–450. Der Block muss gültiges JSON sein (keine Kommentare).`
+Antwortformat (fest vorgegeben):
+- reply: höchstens drei kurze Sätze auf Deutsch, was du eingefügt hast und worauf du dich stützt. Wiederhole dort NICHT den Inhalt, der eingefügt wird, keine Tabellen, keine Rechnungen, kein Markdown.
+- actions: Liste der Einfügungen in der Reihenfolge, in der sie im Dokument stehen sollen. Jede Aktion hat tool und input:
+  insert_text:  input = {"blocks": [{"style": "heading1|heading2|heading3|paragraph|bullet", "text": "..."}]}
+  insert_table: input = {"caption": "Tabelle 1: ... (oder leer)", "headers": ["..."], "rows": [["...", "..."]]}
+  insert_chart: input = {"x_label": "...", "x_unit": "...", "x_start": 0, "x_max": 10, "y_label": "...", "y_unit": "...", "y_start": 0, "y_max": 50, "background": "grid|dots|blank", "width": 500, "height": 350}
+  Alle Felder sind Pflicht, Zahlen als Zahlen (mit Punkt). width üblich 300–600, height 250–450.
+  Hinweise und Annahmen für die Person gehören als insert_text ins Dokument, wenn sie dort hilfreich sind, sonst kurz in reply.
+- Wenn nichts eingefügt werden soll, ist actions leer.`
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -48,6 +68,17 @@ function send(res, status, data) {
 
 /** Startet `claude` und liefert stdout/stderr. Die Eingabe kommt über stdin (keine Probleme mit Anführungszeichen). */
 function runClaude(args, input, cwd) {
+  if (process.platform !== 'win32') return spawnClaude('claude', args, input, cwd)
+  // Zuerst claude.exe (normale Installation), sonst claude.cmd (Installation über npm)
+  return spawnClaude('claude.exe', args, input, cwd).then((r) => (r.notFound ? spawnClaude('claude', args, input, cwd) : r))
+}
+
+/** Argument für cmd.exe in Anführungszeichen setzen. */
+function winQuote(a) {
+  return /[\s"]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a
+}
+
+function spawnClaude(command, args, input, cwd) {
   return new Promise((resolve) => {
     const env = { ...process.env }
     // Ein gesetzter API-Schlüssel würde nach Verbrauch abrechnen statt über das Abo
@@ -55,7 +86,13 @@ function runClaude(args, input, cwd) {
     delete env.ANTHROPIC_AUTH_TOKEN
     let child
     try {
-      child = spawn('claude', args, { cwd, env, shell: process.platform === 'win32', windowsHide: true })
+      child = spawn(command, command === 'claude' && process.platform === 'win32' ? args.map(winQuote) : args, {
+        cwd,
+        env,
+        // claude.cmd (npm-Installation) braucht unter Windows eine Shell, claude.exe nicht
+        shell: command === 'claude' && process.platform === 'win32',
+        windowsHide: true,
+      })
     } catch (err) {
       resolve({ code: -1, stdout: '', stderr: String(err), notFound: true })
       return
@@ -132,6 +169,7 @@ async function chat(req, res) {
     '--allowedTools', 'Read',
     '--strict-mcp-config',
     '--append-system-prompt-file', 'labreporthelp-system.md',
+    '--json-schema', SCHEMA,
   ]
   if (typeof body.sessionId === 'string' && /^[\w-]+$/.test(body.sessionId)) args.push('--resume', body.sessionId)
 
@@ -150,6 +188,10 @@ async function chat(req, res) {
     })
   }
   if (out.is_error) return send(res, 200, { error: String(out.result || 'Claude Code meldet einen Fehler.'), sessionId: out.session_id })
+  const so = out.structured_output
+  if (so && typeof so === 'object') {
+    return send(res, 200, { text: String(so.reply ?? ''), actions: Array.isArray(so.actions) ? so.actions : [], sessionId: out.session_id })
+  }
   send(res, 200, { text: String(out.result ?? ''), sessionId: out.session_id })
 }
 

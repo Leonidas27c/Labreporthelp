@@ -27,6 +27,11 @@ function loadModel(): ModelId {
   }
 }
 
+/** **fett** aus der Antwort als fette Schrift anzeigen statt mit Sternchen. */
+function withBold(text: string) {
+  return text.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <strong key={i}>{part}</strong> : part))
+}
+
 /** Chat mit Claude in der Seitenleiste, über Claude Code und das Claude-Abo. Claude kann Tabellen, Diagramme und Text einfügen. */
 export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => void }) {
   const [status, setStatus] = useState<AboStatus | null>(null)
@@ -146,7 +151,7 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
             {e.kind === 'user' && e.files?.length ? (
               <span className="msg-files">{e.files.map((f) => `📎 ${f}`).join('\n')}</span>
             ) : null}
-            {e.kind === 'action' ? `${e.ok ? '✓' : '✗'} ${e.text}` : e.text}
+            {e.kind === 'action' ? `${e.ok ? '✓' : '✗'} ${e.text}` : e.kind === 'assistant' ? withBold(e.text) : e.text}
           </div>
         ))}
         {busy && <div className="chat-msg assistant typing">Claude arbeitet …</div>}
