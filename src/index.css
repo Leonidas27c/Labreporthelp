@@ -57,11 +57,6 @@ html, body, #root { margin: 0; height: 100%; }
 .page h3 { font-size: 13pt; margin: 14pt 0 6pt; }
 .page p { margin: 0 0 8pt; }
 
-@media print {
-  .topbar, .toolbar { display: none; }
-  .workspace { padding: 0; overflow: visible; }
-  .page { box-shadow: none; width: auto; min-height: 0; }
-}
 
 /* ---------- Aufzieh-Werkzeug ---------- */
 .page-wrap { position: relative; width: 210mm; max-width: 100%; margin: 0 auto; }
@@ -224,3 +219,43 @@ html, body, #root { margin: 0; height: 100%; }
 }
 .attach-btn:hover:not(:disabled) { border-color: #d97757; }
 .msg-files { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+
+/* ---------- Farben ---------- */
+.color-menu { position: relative; display: inline-flex; }
+.color-btn { display: inline-flex; align-items: center; gap: 3px; position: relative; padding-bottom: 6px !important; }
+.color-letter { font-weight: 700; font-family: Georgia, serif; }
+.color-letter.marker { font-family: inherit; font-weight: 400; }
+.color-bar { position: absolute; left: 7px; right: 16px; bottom: 3px; height: 4px; border-radius: 1px; border: 1px solid rgb(0 0 0 / 0.15); }
+.color-btn .caret { font-size: 9px; color: var(--muted); }
+.color-pop {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 50; width: 236px; padding: 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.15); display: flex; flex-direction: column; gap: 10px;
+}
+.color-none { font: inherit; font-size: 13px; text-align: left; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: transparent; cursor: pointer; }
+.color-none:hover { background: var(--accent-soft); }
+.palette-name { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.palette-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.swatch { width: 100%; aspect-ratio: 1; border-radius: 4px; border: 1px solid rgb(0 0 0 / 0.15); cursor: pointer; padding: 0; }
+.swatch:hover { transform: scale(1.12); }
+.swatch.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+.color-custom { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+.color-custom input { width: 40px; height: 26px; border: 1px solid var(--border); border-radius: 4px; padding: 0; background: none; cursor: pointer; }
+.page mark { border-radius: 2px; padding: 0 1px; color: inherit; }
+
+/* ---------- Drucken / PDF ---------- */
+@page { size: A4; margin: 25mm 20mm; }
+@media print {
+  html, body, #root, .app, .body, .workspace { height: auto !important; overflow: visible !important; background: #fff !important; }
+  .app, .body { display: block !important; }
+  .topbar, .toolbar, .side-panel, .hint, .draw-layer, .draw-menu, .resize-handle, .size-badge { display: none !important; }
+  .workspace { padding: 0 !important; }
+  .page-wrap { width: auto !important; margin: 0 !important; }
+  .page { box-shadow: none !important; width: auto !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; }
+  .chart-node { outline: none !important; box-shadow: none !important; break-inside: avoid; }
+  .page table { break-inside: auto; }
+  .page tr, .page h1, .page h2, .page h3 { break-inside: avoid; }
+  .page h1, .page h2, .page h3 { break-after: avoid; }
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
