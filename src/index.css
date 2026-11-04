@@ -1,0 +1,64 @@
+:root {
+  --bg: #e9ebef;
+  --surface: #ffffff;
+  --border: #d3d7de;
+  --text: #1d2330;
+  --muted: #667085;
+  --accent: #2f6fde;
+  --accent-soft: #e3ecfc;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; }
+
+.app { display: flex; flex-direction: column; height: 100%; }
+
+.topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.logo { font-weight: 700; color: var(--accent); }
+.title {
+  font: inherit; font-size: 15px; border: 1px solid transparent; border-radius: 6px;
+  padding: 4px 8px; min-width: 200px; background: transparent;
+}
+.title:hover, .title:focus { border-color: var(--border); outline: none; }
+.status { margin-left: auto; color: var(--muted); font-size: 13px; }
+
+.toolbar {
+  display: flex; flex-wrap: wrap; gap: 4px 12px;
+  padding: 6px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.toolbar .group { display: flex; gap: 2px; }
+.toolbar .group + .group { border-left: 1px solid var(--border); padding-left: 12px; }
+.toolbar button {
+  font: inherit; font-size: 14px; min-width: 32px; height: 30px; padding: 0 8px;
+  border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text); cursor: pointer;
+}
+.toolbar button:hover:not(:disabled) { background: var(--bg); }
+.toolbar button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.toolbar button:disabled { opacity: 0.35; cursor: default; }
+
+.workspace { flex: 1; overflow: auto; padding: 32px 16px; }
+
+/* Die Seite: ungefähr DIN A4 (210 mm breit) */
+.page {
+  width: 210mm; max-width: 100%; min-height: 297mm; margin: 0 auto;
+  padding: 25mm 20mm; background: var(--surface);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 4px 16px rgb(0 0 0 / 0.06);
+  font-family: 'Times New Roman', Georgia, serif; font-size: 12pt; line-height: 1.5;
+  outline: none;
+}
+.page h1 { font-size: 20pt; margin: 0 0 12pt; }
+.page h2 { font-size: 16pt; margin: 18pt 0 8pt; }
+.page h3 { font-size: 13pt; margin: 14pt 0 6pt; }
+.page p { margin: 0 0 8pt; }
+
+@media print {
+  .topbar, .toolbar { display: none; }
+  .workspace { padding: 0; overflow: visible; }
+  .page { box-shadow: none; width: auto; min-height: 0; }
+}
