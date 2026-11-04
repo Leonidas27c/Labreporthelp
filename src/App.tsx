@@ -14,7 +14,10 @@ import { ChartPanel } from './components/ChartPanel'
 import { ChatPanel } from './components/ChatPanel'
 import { useDesktopBridge } from './lib/desktopBridge'
 import { ChartNode } from './extensions/ChartNode'
-import { TablePlaceholderNode } from './extensions/TablePlaceholderNode'
+import { TablePlaceholderNode, TablePlaceholderUpgrade } from './extensions/TablePlaceholderNode'
+import { LabTable } from './extensions/LabTable'
+import { TablePanel } from './components/TablePanel'
+import { findTable } from './lib/tableModel'
 import {
   createDocument,
   downloadDocument,
@@ -38,12 +41,14 @@ export default function App() {
     extensions: [
       StarterKit,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      TableKit.configure({ table: { resizable: false } }),
+      TableKit.configure({ table: false }),
+      LabTable.configure({ resizable: true, allowTableNodeSelection: true, cellMinWidth: 40 }),
       TextStyle,
       Color,
       Highlight.configure({ multicolor: true }),
       ChartNode,
       TablePlaceholderNode,
+      TablePlaceholderUpgrade,
     ],
     content: autosaved.current?.content ?? EMPTY_CONTENT,
     editorProps: { attributes: { class: 'page', spellcheck: 'true' } },
@@ -134,6 +139,12 @@ export default function App() {
     },
   })
 
+  // Steht der Cursor in einer Tabelle? Dann „Tabelle formatieren“ zeigen.
+  const selectedTable = useEditorState({
+    editor,
+    selector: ({ editor: e }) => (e ? findTable(e.state) : null),
+  })
+
   if (!editor) return null
 
   return (
@@ -179,6 +190,7 @@ export default function App() {
         {drawing && <div className="hint">Feld mit gedrückter linker Maustaste aufziehen · Esc zum Abbrechen</div>}
       </main>
       {selectedChart && <ChartPanel editor={editor} pos={selectedChart.pos} attrs={selectedChart.attrs} />}
+      {!selectedChart && selectedTable && <TablePanel editor={editor} info={selectedTable} />}
       {chatOpen && <ChatPanel editor={editor} onClose={() => setChatOpen(false)} />}
       </div>
       <input ref={fileInput} type="file" accept=".json,.lrh.json" hidden onChange={handleFile} />

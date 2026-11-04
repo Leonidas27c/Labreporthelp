@@ -21,7 +21,7 @@ export function ChartView({ node, updateAttributes, selected, editor, getPos }: 
     const snapped = snapChartSize(a, s.width, s.height, maxWidth)
     updateAttributes({ width: snapped.width, height: snapped.height })
   })
-  const { moving, moveStyle, moveProps } = useMove(editor, getPos, a.offsetX, a.width)
+  const { moving, moveStyle, moveProps } = useMove(editor, getPos, a.width)
   const id = useId().replace(/[^a-zA-Z0-9]/g, '')
 
   // Auf ganze Abschnitte einrasten: das Raster endet oben und rechts an einer dicken Linie

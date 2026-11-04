@@ -10,6 +10,7 @@ import {
   type AxisSettings,
   type ChartAttrs,
 } from '../lib/chartModel'
+import { NumberInput } from './PanelInputs'
 
 interface ChartPanelProps {
   editor: Editor
@@ -141,29 +142,5 @@ export function ChartPanel({ editor, pos, attrs }: ChartPanelProps) {
 
       <button className="danger" onClick={remove}>Diagramm löschen</button>
     </aside>
-  )
-}
-
-/** Zahlenfeld, das Komma und Punkt akzeptiert und erst gültige Zahlen übernimmt. */
-function NumberInput(props: { value: number; onChange: (v: number) => void; min?: number; max?: number; disabled?: boolean }) {
-  const [text, setText] = useState<string | null>(null)
-  const shown = text ?? String(props.value).replace('.', ',')
-  const commit = (raw: string) => {
-    const v = Number(raw.replace(',', '.'))
-    if (raw.trim() === '' || !Number.isFinite(v)) return
-    const clamped = Math.min(props.max ?? Infinity, Math.max(props.min ?? -Infinity, v))
-    props.onChange(clamped)
-  }
-  return (
-    <input
-      inputMode="decimal"
-      value={shown}
-      disabled={props.disabled}
-      onChange={(e) => {
-        setText(e.target.value)
-        commit(e.target.value)
-      }}
-      onBlur={() => setText(null)}
-    />
   )
 }
