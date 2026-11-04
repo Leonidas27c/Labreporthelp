@@ -205,3 +205,22 @@ html, body, #root { margin: 0; height: 100%; }
 .desktop-status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #c3c8d1; }
 .desktop-status.on { color: #1e7a46; }
 .desktop-status.on::before { background: #22a05a; }
+
+/* Modellauswahl und Anhänge im Chat */
+.model-select { display: flex; flex-direction: column; gap: 3px; margin: 6px 0 10px; font-size: 12px; color: var(--muted); }
+.model-select select { font: inherit; font-size: 13px; color: var(--text); padding: 5px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.attachments { display: flex; flex-wrap: wrap; gap: 4px; }
+.attachment {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 3px 4px 3px 8px;
+  background: #fdf6f2; border: 1px solid #f0d3c4; border-radius: 6px; max-width: 100%;
+}
+.attachment small { color: var(--muted); }
+.attachment button { border: 0; background: transparent; cursor: pointer; color: var(--muted); font-size: 11px; }
+.attachment.reading { color: var(--muted); font-style: italic; padding-right: 8px; }
+.chat-input-row { display: flex; justify-content: space-between; align-items: center; }
+.attach-btn {
+  font: inherit; font-size: 13px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); cursor: pointer;
+}
+.attach-btn:hover:not(:disabled) { border-color: #d97757; }
+.msg-files { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }

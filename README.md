@@ -45,6 +45,10 @@ Einrichtung (einmalig):
 3. Claude Desktop neu starten, `npm run dev` starten, App im Browser öffnen
 
 **Claude-Chat in der App** (optional, mit API-Schlüssel)
+- Modell wählbar: Haiku 5.5 (sehr günstig), Sonnet 5.5, Opus 5.5 (Standard), Fable 5.1 (am stärksten, am teuersten)
+- Dateien anhängen (📎 oder hineinziehen): PDF, Word (.docx), PowerPoint (.pptx), Bilder, Text.
+  Z. B. die Versuchsanleitung hochladen und „Erstelle daraus die Messwerttabellen und Diagramme“ schreiben.
+  Alte Formate (.doc, .ppt) bitte vorher als .docx/.pptx oder PDF speichern.
 - Button „✦ Claude“ oben rechts öffnet den Chat
 - Claude fügt an der Cursorposition Tabellen, Diagrammfelder und Text ein, z. B.
   „Erstelle eine Messwerttabelle mit Zeit [s] und Temperatur [°C], 10 Zeilen“
@@ -92,6 +96,7 @@ Einrichtung (einmalig):
   - `src/lib/documentFile.ts` – Speichern/Öffnen
   - `src/components/ChatPanel.tsx` – Chat mit Claude
   - `src/lib/claude.ts` – Anfrage an Claude und Werkzeuge
+  - `src/lib/attachments.ts` – Dateien für Claude lesen (PDF, Word, PowerPoint, Bilder)
   - `src/lib/documentTools.ts` – was Claude im Dokument tun kann
   - `mcp/server.mjs` – MCP-Server für Claude Desktop
   - `src/lib/desktopBridge.ts` – Verbindung der App zum MCP-Server
