@@ -15,8 +15,9 @@ function configDirs() {
     if (process.env.APPDATA) dirs.push(join(process.env.APPDATA, 'Claude'))
     const local = process.env.LOCALAPPDATA
     if (local && existsSync(join(local, 'Packages'))) {
+      // Microsoft-Store-/MSIX-Version: Claude Desktop liest dann aus dem Paketordner, nicht aus %APPDATA%
       for (const p of readdirSync(join(local, 'Packages'))) {
-        if (/^(AnthropicPBC\.)?Claude_/i.test(p)) dirs.push(join(local, 'Packages', p, 'LocalCache', 'Roaming', 'Claude'))
+        if (/^([\w-]*\.)?claude_|anthropic/i.test(p)) dirs.push(join(local, 'Packages', p, 'LocalCache', 'Roaming', 'Claude'))
       }
     }
   } else if (process.platform === 'darwin') {
@@ -43,7 +44,7 @@ export function desktopSnippet() {
 
 export function connectClaudeDesktop() {
   const entry = desktopEntry()
-  const existing = configDirs().filter((d) => existsSync(d))
+  const existing = configDirs().filter((d) => existsSync(d) || /[\\/]Packages[\\/]/.test(d))
   if (!existing.length) {
     return {
       ok: false,
