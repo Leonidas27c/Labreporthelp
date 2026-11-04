@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type Anthropic from '@anthropic-ai/sdk'
 import type { Editor } from '@tiptap/react'
 import { DocumentTools } from '../lib/documentTools'
-import { DEFAULT_MODEL, MODELS, describeError, runChat, type ModelId } from '../lib/claude'
+import { DEFAULT_MODEL, MODELS, aboStatus, runAboChat, type AboStatus, type ModelId } from '../lib/aboChat'
 import { ACCEPT, readAttachment, type Attachment } from '../lib/attachments'
 
-const KEY_STORAGE = 'labreporthelp:anthropic-key'
 const MODEL_STORAGE = 'labreporthelp:model'
 
 type Entry =
@@ -29,18 +27,9 @@ function loadModel(): ModelId {
   }
 }
 
-function loadKey() {
-  try {
-    return localStorage.getItem(KEY_STORAGE) ?? ''
-  } catch {
-    return ''
-  }
-}
-
-/** Chat mit Claude in der Seitenleiste. Claude kann Tabellen, Diagramme und Text einfügen. */
+/** Chat mit Claude in der Seitenleiste, über Claude Code und das Claude-Abo. Claude kann Tabellen, Diagramme und Text einfügen. */
 export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => void }) {
-  const [apiKey, setApiKey] = useState(loadKey)
-  const [showSettings, setShowSettings] = useState(() => !loadKey())
+  const [status, setStatus] = useState<AboStatus | null>(null)
   const [entries, setEntries] = useState<Entry[]>([])
   const [input, setInput] = useState('')
   const [model, setModel] = useState<ModelId>(loadModel)
@@ -48,7 +37,7 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
   const [reading, setReading] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
-  const history = useRef<Anthropic.Beta.BetaMessageParam[]>([])
+  const sessionId = useRef<string | null>(null)
   const tools = useMemo(() => new DocumentTools(editor), [editor])
   const listEnd = useRef<HTMLDivElement>(null)
 
@@ -56,14 +45,9 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
     listEnd.current?.scrollIntoView({ block: 'end' })
   }, [entries, busy])
 
-  const saveKey = (k: string) => {
-    setApiKey(k)
-    try {
-      localStorage.setItem(KEY_STORAGE, k)
-    } catch {
-      /* ignorieren */
-    }
-  }
+  useEffect(() => {
+    aboStatus().then(setStatus)
+  }, [])
 
   const saveModel = (m: ModelId) => {
     setModel(m)
@@ -90,49 +74,35 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
   const send = async (text: string) => {
     const msg = text.trim() || (files.length ? 'Lies die angehängte Datei und fasse kurz zusammen, was für das Protokoll wichtig ist.' : '')
     if (!msg || busy || reading) return
-    if (!apiKey) {
-      setShowSettings(true)
-      setEntries((e) => [
-        ...e,
-        {
-          kind: 'error',
-          text:
-            'Für den Chat in der App fehlt noch ein API-Schlüssel (oben bei ⚙ eintragen). ' +
-            'Ohne Schlüssel und ohne Zusatzkosten geht es über Claude Desktop mit deinem Abo: dort schreiben, die Tabellen landen hier im Dokument.',
-        },
-      ])
-      return
-    }
     const attached = files
     setInput('')
     setFiles([])
     setEntries((e) => [...e, { kind: 'user', text: msg, files: attached.map((a) => a.name) }])
     setBusy(true)
-    const before = history.current.length
-    // Dateien zuerst, dann die Frage (so arbeitet Claude am besten mit Dokumenten)
-    history.current.push({
-      role: 'user',
-      content: attached.length ? [...attached.map((a) => a.block), { type: 'text', text: msg }] : msg,
-    })
     try {
-      await runChat(apiKey, model, history.current, tools, (ev) =>
-        setEntries((e) => [
-          ...e,
-          ev.type === 'text' ? { kind: 'assistant', text: ev.text } : { kind: 'action', text: ev.label, ok: ev.ok },
-        ]),
-      )
+      sessionId.current = await runAboChat({
+        message: msg,
+        model,
+        sessionId: sessionId.current,
+        files: attached,
+        tools,
+        onEvent: (ev) =>
+          setEntries((e) => [
+            ...e,
+            ev.type === 'text' ? { kind: 'assistant', text: ev.text } : { kind: 'action', text: ev.label, ok: ev.ok },
+          ]),
+      })
     } catch (err) {
-      // Unterhaltung auf den Stand vor der Anfrage zurücksetzen, damit sie gültig bleibt
-      history.current.length = before
       setFiles((cur) => (cur.length ? cur : attached))
-      setEntries((e) => [...e, { kind: 'error', text: describeError(err) }])
+      setEntries((e) => [...e, { kind: 'error', text: err instanceof Error ? err.message : String(err) }])
+      aboStatus().then(setStatus)
     } finally {
       setBusy(false)
     }
   }
 
   const reset = () => {
-    history.current = []
+    sessionId.current = null
     setEntries([])
   }
 
@@ -142,7 +112,6 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
         <h2>✦ Claude</h2>
         <div className="chat-head-actions">
           <button title="Neuer Chat" onClick={reset} disabled={busy}>Neu</button>
-          <button title="Einstellungen" onClick={() => setShowSettings((s) => !s)}>⚙</button>
           <button title="Schließen" onClick={onClose}>✕</button>
         </div>
       </div>
@@ -156,31 +125,17 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
         </select>
       </label>
 
-      {showSettings && (
+      {status && !status.installed && (
         <section className="chat-settings">
-          <label>
-            Anthropic API-Schlüssel
-            <input
-              type="password"
-              value={apiKey}
-              placeholder="sk-ant-…"
-              autoComplete="off"
-              onChange={(e) => saveKey(e.target.value.trim())}
-            />
-          </label>
-          <p className="help">
-            Den Schlüssel bekommst du unter{' '}
-            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">console.anthropic.com</a>.
-            Er wird nur in diesem Browser gespeichert und direkt an Anthropic geschickt. Die API wird getrennt vom Claude-Abo nach Verbrauch abgerechnet.
-          </p>
-          {apiKey && <button className="primary" onClick={() => setShowSettings(false)}>Fertig</button>}
+          <p className="help">{status.message}</p>
+          <button onClick={() => aboStatus().then(setStatus)}>Erneut prüfen</button>
         </section>
       )}
 
       <div className="chat-list">
         {entries.length === 0 && (
           <div className="chat-empty">
-            <p>Sag mir, was ins Dokument soll. Ich füge es an der Cursorposition ein.</p>
+            <p>Sag mir, was ins Dokument soll. Ich füge es an der Cursorposition ein. Läuft über dein Claude-Abo.</p>
             {EXAMPLES.map((ex) => (
               <button key={ex} className="example" onClick={() => send(ex)} disabled={busy}>{ex}</button>
             ))}
