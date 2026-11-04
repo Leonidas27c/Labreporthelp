@@ -9,12 +9,18 @@ import { execFileSync } from 'node:child_process'
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 
-/** Ordner, in denen Claude Desktop seine Konfiguration hat (normale Installation und Microsoft-Store-Version). */
+/** Ordner, in denen Claude Desktop seine Konfiguration hat (normale Installation, Claude-Data, Microsoft-Store-Version). */
 function configDirs() {
   const dirs = []
   if (process.platform === 'win32') {
     if (process.env.APPDATA) dirs.push(join(process.env.APPDATA, 'Claude'))
     const local = process.env.LOCALAPPDATA
+    // Neuere Claude-Desktop-Versionen: %LOCALAPPDATA%\Claude-Data\claude_<Kennung>
+    if (local && existsSync(join(local, 'Claude-Data'))) {
+      for (const p of readdirSync(join(local, 'Claude-Data'), { withFileTypes: true })) {
+        if (p.isDirectory()) dirs.push(join(local, 'Claude-Data', p.name))
+      }
+    }
     if (local && existsSync(join(local, 'Packages'))) {
       // Microsoft-Store-/MSIX-Version: Claude Desktop liest dann aus dem Paketordner, nicht aus %APPDATA%
       for (const p of readdirSync(join(local, 'Packages'))) {
