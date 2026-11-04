@@ -26,10 +26,12 @@ und es erscheint in deinem Dokument.
 
 1. Claude Desktop von https://claude.ai/download installieren, einmal öffnen
    und anmelden.
-2. "Claude Desktop verbinden.bat" doppelklicken. Das trägt Labreporthelp
-   in Claude Desktop ein (vorhandene Einträge bleiben erhalten).
-3. Claude Desktop ganz beenden (auch unten rechts neben der Uhr:
-   Rechtsklick auf das Claude-Symbol, "Beenden") und neu öffnen.
+2. Claude Desktop ganz beenden (auch unten rechts neben der Uhr:
+   Rechtsklick auf das Claude-Symbol, "Beenden"). Wichtig: Claude Desktop
+   speichert beim Beenden seine Einstellungen und würde den Eintrag sonst
+   wieder überschreiben.
+3. "Claude Desktop verbinden.bat" doppelklicken (oder in Labreporthelp im
+   Chat auf "Mit Claude Desktop verbinden"). Dann Claude Desktop öffnen.
 4. Labreporthelp starten. Oben rechts in der App steht dann
    "Claude Desktop verbunden".
 

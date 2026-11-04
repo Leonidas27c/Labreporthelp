@@ -208,12 +208,14 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
           <p className="help">
             1. Claude Desktop von <a href="https://claude.ai/download" target="_blank" rel="noreferrer">claude.ai/download</a> installieren, öffnen und anmelden.
             <br />
-            2. Hier verbinden:
+            2. Claude Desktop ganz beenden (auch unten rechts neben der Uhr: Rechtsklick auf das Claude-Symbol, „Beenden“).
+            <br />
+            3. Hier verbinden, danach Claude Desktop wieder öffnen:
           </p>
           <button className="primary" onClick={() =>
               connectDesktop().then((m) => {
                 setDesktopMsg(m)
-                if (!m.ok) desktopSnippet().then(setSnippet)
+                if (!m.ok && !m.running) desktopSnippet().then(setSnippet)
               })
             }>Mit Claude Desktop verbinden</button>
           {desktopMsg && <p className="help">{desktopMsg.text}</p>}
@@ -226,7 +228,7 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
               <p>
                 In Claude Desktop: Einstellungen → Entwickler → „Konfiguration bearbeiten“. Die Datei öffnet sich (z. B. im Editor).
                 Ist sie leer oder steht nur <code>{'{}'}</code> drin, den ganzen Inhalt durch diesen Text ersetzen. Steht schon etwas drin, schick ein Foto davon an Claude.
-                Speichern, Claude Desktop ganz beenden und neu öffnen.
+                Speichern, dann Claude Desktop ganz beenden und neu öffnen. Steht der Eintrag danach nicht mehr in der Datei, die Datei bei beendetem Claude Desktop im Editor öffnen und dort einfügen.
               </p>
               <textarea className="snippet" readOnly value={snippet} rows={8} onFocus={(e) => e.target.select()} />
               <button

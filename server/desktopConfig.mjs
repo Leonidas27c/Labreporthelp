@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, readd
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
+import { execFileSync } from 'node:child_process'
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 
@@ -42,7 +43,46 @@ export function desktopSnippet() {
   return JSON.stringify({ mcpServers: { labreporthelp: desktopEntry() } }, null, 2)
 }
 
+/**
+ * Läuft Claude Desktop gerade? Dann darf nicht geschrieben werden: Claude Desktop speichert
+ * seine Einstellungen beim Beenden in dieselbe Datei und würde den Eintrag überschreiben.
+ * Claude Code (claude.exe in .local\bin) zählt nicht.
+ */
+export function claudeDesktopRunning() {
+  try {
+    if (process.platform === 'win32') {
+      const out = execFileSync(
+        'powershell',
+        ['-NoProfile', '-Command', "Get-Process -Name claude -ErrorAction SilentlyContinue | ForEach-Object { if ($_.Path) { $_.Path } else { '?' } }"],
+        { encoding: 'utf8', windowsHide: true, timeout: 15000 },
+      )
+      return out
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .some((p) => !/[\\/]\.local[\\/]bin[\\/]/i.test(p))
+    }
+    if (process.platform === 'darwin') {
+      execFileSync('pgrep', ['-x', 'Claude'], { stdio: 'ignore' })
+      return true
+    }
+  } catch {
+    /* nicht gefunden oder nicht prüfbar */
+  }
+  return false
+}
+
 export function connectClaudeDesktop() {
+  if (claudeDesktopRunning()) {
+    return {
+      ok: false,
+      running: true,
+      files: [],
+      messages: [
+        'Claude Desktop ist noch geöffnet. Bitte zuerst ganz beenden (auch unten rechts neben der Uhr: Rechtsklick auf das Claude-Symbol, „Beenden“), dann noch einmal auf den Knopf klicken. Sonst überschreibt Claude Desktop den Eintrag beim Beenden.',
+      ],
+    }
+  }
   const entry = desktopEntry()
   const existing = configDirs().filter((d) => existsSync(d) || /[\\/]Packages[\\/]/.test(d))
   if (!existing.length) {

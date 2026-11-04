@@ -28,17 +28,17 @@ export class NeedsLoginError extends Error {}
 export class NeedsDesktopError extends Error {}
 
 /** Trägt Labreporthelp in Claude Desktop ein. Liefert eine Meldung für die Person. */
-export async function connectDesktop(): Promise<{ ok: boolean; text: string }> {
+export async function connectDesktop(): Promise<{ ok: boolean; running?: boolean; text: string }> {
   try {
     const r = await fetch('/api/desktop/connect', { method: 'POST' })
     const data = await r.json()
     if (data.ok) {
       return {
         ok: true,
-        text: `Eingetragen in: ${(data.files ?? []).join(', ')}. Jetzt Claude Desktop ganz beenden (auch unten rechts neben der Uhr: Rechtsklick auf das Claude-Symbol, „Beenden“) und neu öffnen. Dann steht oben „Claude Desktop verbunden“, und in Claude Desktop unter Einstellungen → Entwickler „labreporthelp“.`,
+        text: `Eingetragen in: ${(data.files ?? []).join(', ')}. Jetzt Claude Desktop öffnen. Dann steht oben „Claude Desktop verbunden“, und in Claude Desktop unter Einstellungen → Entwickler „labreporthelp“.`,
       }
     }
-    return { ok: false, text: (data.messages ?? []).join(' ') || data.error || 'Das hat nicht geklappt.' }
+    return { ok: false, running: Boolean(data.running), text: (data.messages ?? []).join(' ') || data.error || 'Das hat nicht geklappt.' }
   } catch {
     return { ok: false, text: 'Der lokale Server antwortet nicht.' }
   }
