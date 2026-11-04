@@ -244,18 +244,36 @@ html, body, #root { margin: 0; height: 100%; }
 .color-custom input { width: 40px; height: 26px; border: 1px solid var(--border); border-radius: 4px; padding: 0; background: none; cursor: pointer; }
 .page mark { border-radius: 2px; padding: 0 1px; color: inherit; }
 
+/* ---------- Seitenumbrüche im Editor ---------- */
+.page-break {
+  position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px dashed #b8c2cc; pointer-events: none; z-index: 2;
+}
+.page-break span {
+  position: absolute; right: 6px; top: -9px; padding: 0 6px; background: var(--surface);
+  font: 11px system-ui, sans-serif; color: var(--muted);
+}
+.page-count { position: absolute; right: 0; bottom: -22px; font: 12px system-ui, sans-serif; color: var(--muted); }
+.page-wrap { margin-bottom: 28px; }
+#print-root { display: none; }
+
 /* ---------- Drucken / PDF ---------- */
-@page { size: A4; margin: 25mm 20mm; }
+/* Rand 0: so druckt der Browser keine eigene Kopf-/Fußzeile (Adresse, Titel, Datum).
+   Die Ränder kommen aus der Tabelle in #print-root, deren Kopf und Fuß sich auf jeder Seite wiederholen. */
+@page { size: A4; margin: 0; }
 @media print {
-  html, body, #root, .app, .body, .workspace { height: auto !important; overflow: visible !important; background: #fff !important; }
-  .app, .body { display: block !important; }
-  .topbar, .toolbar, .side-panel, .hint, .draw-layer, .draw-menu, .resize-handle, .size-badge { display: none !important; }
-  .workspace { padding: 0 !important; }
-  .page-wrap { width: auto !important; margin: 0 !important; }
-  .page { box-shadow: none !important; width: auto !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; }
-  .chart-node { outline: none !important; box-shadow: none !important; break-inside: avoid; }
-  .page table { break-inside: auto; }
-  .page tr, .page h1, .page h2, .page h3 { break-inside: avoid; }
-  .page h1, .page h2, .page h3 { break-after: avoid; }
+  html, body { background: #fff !important; height: auto !important; overflow: visible !important; }
+  body > #root { display: none !important; }
+  #print-root { display: block !important; }
+  .print-frame { width: 100%; border-collapse: collapse; }
+  .print-frame > thead > tr > td, .print-frame > tfoot > tr > td, .print-frame > tbody > tr > .print-body { padding: 0; border: 0; }
+  .print-top { height: 25mm; }
+  .print-bottom { height: 25mm; }
+  .print-body { padding: 0 20mm !important; }
+  #print-root .page { box-shadow: none !important; width: auto !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; }
+  #print-root .resize-handle, #print-root .size-badge { display: none !important; }
+  #print-root .chart-node { outline: none !important; box-shadow: none !important; break-inside: avoid; }
+  #print-root .page table { break-inside: auto; }
+  #print-root .page tr, #print-root .page h1, #print-root .page h2, #print-root .page h3 { break-inside: avoid; }
+  #print-root .page h1, #print-root .page h2, #print-root .page h3 { break-after: avoid; }
   * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
