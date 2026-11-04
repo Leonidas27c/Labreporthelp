@@ -92,6 +92,15 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
     if (!msg || busy || reading) return
     if (!apiKey) {
       setShowSettings(true)
+      setEntries((e) => [
+        ...e,
+        {
+          kind: 'error',
+          text:
+            'Für den Chat in der App fehlt noch ein API-Schlüssel (oben bei ⚙ eintragen). ' +
+            'Ohne Schlüssel und ohne Zusatzkosten geht es über Claude Desktop mit deinem Abo: dort schreiben, die Tabellen landen hier im Dokument.',
+        },
+      ])
       return
     }
     const attached = files
