@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
 import { DocumentTools } from '../lib/documentTools'
-import { DEFAULT_MODEL, MODELS, NeedsLoginError, aboLogin, aboStatus, runAboChat, type AboStatus, type ModelId } from '../lib/aboChat'
+import { DEFAULT_MODEL, MODELS, NeedsDesktopError, NeedsLoginError, aboLogin, connectDesktop, aboStatus, runAboChat, type AboStatus, type ModelId } from '../lib/aboChat'
 import { ACCEPT, readAttachment, type Attachment } from '../lib/attachments'
 
 const MODEL_STORAGE = 'labreporthelp:model'
@@ -45,6 +45,8 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
   // Anmeldung: null = kein Hinweis, 'needed' = Knopf zeigen, 'waiting' = Fenster ist offen, wir warten
   const [login, setLogin] = useState<null | 'needed' | 'waiting'>(null)
   const [loginError, setLoginError] = useState<string | null>(null)
+  const [showDesktop, setShowDesktop] = useState(false)
+  const [desktopMsg, setDesktopMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const sessionId = useRef<string | null>(null)
   const tools = useMemo(() => new DocumentTools(editor), [editor])
   const listEnd = useRef<HTMLDivElement>(null)
@@ -132,6 +134,10 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
       setFiles((cur) => (cur.length ? cur : attached))
       setEntries((e) => [...e, { kind: 'error', text: err instanceof Error ? err.message : String(err) }])
       if (err instanceof NeedsLoginError) setLogin((l) => l ?? 'needed')
+      if (err instanceof NeedsDesktopError) {
+        setLogin(null)
+        setShowDesktop(true)
+      }
       aboStatus().then(setStatus)
     } finally {
       setBusy(false)
@@ -185,6 +191,25 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
             </>
           )}
           {loginError && <p className="help">{loginError}</p>}
+          <p className="help">
+            Kostenloses Claude-Konto? Claude Code gibt es erst ab Pro.{' '}
+            <button className="link-btn" onClick={() => setShowDesktop(true)}>Stattdessen Claude Desktop benutzen</button>
+          </p>
+        </section>
+      )}
+
+      {showDesktop && (
+        <section className="chat-settings chat-login">
+          <p className="help">
+            <strong>Mit kostenlosem Konto:</strong> Du schreibst in der Claude-Desktop-App, z. B. „Erstelle in Labreporthelp eine Messwerttabelle mit Zeit [s] und Temperatur [°C]“, und es erscheint hier im Dokument.
+          </p>
+          <p className="help">
+            1. Claude Desktop von <a href="https://claude.ai/download" target="_blank" rel="noreferrer">claude.ai/download</a> installieren, öffnen und anmelden.
+            <br />
+            2. Hier verbinden:
+          </p>
+          <button className="primary" onClick={() => connectDesktop().then(setDesktopMsg)}>Mit Claude Desktop verbinden</button>
+          {desktopMsg && <p className="help">{desktopMsg.text}</p>}
         </section>
       )}
 

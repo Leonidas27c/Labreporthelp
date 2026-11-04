@@ -7,6 +7,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { connectClaudeDesktop } from './desktopConfig.mjs'
 
 const WORK_DIR = join(tmpdir(), 'labreporthelp-chat')
 const MODELS = new Set(['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1'])
@@ -120,6 +121,9 @@ const NOT_INSTALLED =
   'dann im Terminal `claude` starten und mit deinem Claude-Konto anmelden. Danach `npm run dev` neu starten.'
 
 const NOT_LOGGED_IN = 'Du bist bei Claude noch nicht angemeldet. Klicke auf „Bei Claude anmelden“.'
+const NO_PLAN =
+  'Dein Claude-Konto enthält kein Claude Code (das gibt es ab Pro). Mit dem kostenlosen Konto kannst du stattdessen die Claude-Desktop-App benutzen: oben auf „Mit Claude Desktop verbinden“ klicken.'
+const PLAN_HINT = /subscription|pro or max|max plan|pro plan|upgrade|not (?:available|included)|free (?:plan|tier)|does not have access/i
 const LOGIN_HINT = /not logged in|\/login|log ?in|authenticat|oauth|credential|anmeld/i
 
 async function status(res) {
@@ -213,11 +217,13 @@ async function chat(req, res) {
     out = JSON.parse(r.stdout)
   } catch {
     const detail = (r.stderr || r.stdout).trim().slice(0, 500)
+    if (PLAN_HINT.test(detail)) return send(res, 200, { error: NO_PLAN, needsDesktop: true })
     if (LOGIN_HINT.test(detail)) return send(res, 200, { error: NOT_LOGGED_IN, needsLogin: true })
     return send(res, 200, { error: `Claude Code hat nicht geantwortet.${detail ? ` (${detail})` : ''}` })
   }
   if (out.is_error) {
     const msg = String(out.result || 'Claude Code meldet einen Fehler.')
+    if (PLAN_HINT.test(msg)) return send(res, 200, { error: NO_PLAN, needsDesktop: true })
     if (LOGIN_HINT.test(msg)) return send(res, 200, { error: NOT_LOGGED_IN, needsLogin: true })
     return send(res, 200, { error: msg, sessionId: out.session_id })
   }
@@ -232,7 +238,7 @@ export function middleware(req, res, next) {
   const url = req.url?.split('?')[0]
   // Nur Anfragen von dieser Seite selbst annehmen (Schutz vor fremden Webseiten)
   const origin = req.headers.origin
-  if (url?.startsWith('/api/abo/') && origin && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+  if ((url?.startsWith('/api/abo/') || url?.startsWith('/api/desktop/')) && origin && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
     return send(res, 403, { error: 'Nicht erlaubt.' })
   }
   if (url === '/api/abo/status' && req.method === 'GET') return void status(res).catch((e) => send(res, 500, { error: String(e) }))
@@ -240,6 +246,14 @@ export function middleware(req, res, next) {
     // Nur von der eigenen Seite: ohne Origin-Kopf (z. B. direkter Aufruf) wird nichts geöffnet
     if (!origin) return send(res, 403, { error: 'Nicht erlaubt.' })
     return login(res)
+  }
+  if (url === '/api/desktop/connect' && req.method === 'POST') {
+    if (!origin) return send(res, 403, { error: 'Nicht erlaubt.' })
+    try {
+      return send(res, 200, connectClaudeDesktop())
+    } catch (e) {
+      return send(res, 200, { ok: false, files: [], messages: [`Fehler: ${e}`] })
+    }
   }
   if (url === '/api/abo/chat' && req.method === 'POST') return void chat(req, res).catch((e) => send(res, 500, { error: String(e) }))
   next()

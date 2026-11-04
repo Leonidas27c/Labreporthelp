@@ -16,7 +16,7 @@ npm run build
 
 mkdir -p "$PKG/node" "$PKG/server" "$PKG/scripts" "$PKG/mcp"
 cp -r dist "$PKG/app"
-cp server/aboChat.mjs server/standalone.mjs "$PKG/server/"
+cp server/aboChat.mjs server/standalone.mjs server/desktopConfig.mjs "$PKG/server/"
 cp release/scripts/einrichten.ps1 release/scripts/claude-desktop.mjs "$PKG/scripts/"
 # MCP-Server für Claude Desktop mit allen Bausteinen in eine Datei packen
 npx rolldown mcp/server.mjs --platform node --format esm --minify --file "$PKG/mcp/server.mjs"
