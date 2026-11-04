@@ -14,11 +14,13 @@ echo "Node.js $NODE_VERSION"
 
 npm run build
 
-mkdir -p "$PKG/node" "$PKG/server" "$PKG/scripts"
+mkdir -p "$PKG/node" "$PKG/server" "$PKG/scripts" "$PKG/mcp"
 cp -r dist "$PKG/app"
 cp server/aboChat.mjs server/standalone.mjs "$PKG/server/"
-cp release/scripts/einrichten.ps1 "$PKG/scripts/"
-cp "release/Labreporthelp starten.bat" "release/Einrichtung wiederholen.bat" release/LIESMICH.txt "$PKG/"
+cp release/scripts/einrichten.ps1 release/scripts/claude-desktop.mjs "$PKG/scripts/"
+# MCP-Server für Claude Desktop mit allen Bausteinen in eine Datei packen
+npx rolldown mcp/server.mjs --platform node --format esm --minify --file "$PKG/mcp/server.mjs"
+cp "release/Labreporthelp starten.bat" "release/Einrichtung wiederholen.bat" "release/Claude Desktop verbinden.bat" release/LIESMICH.txt "$PKG/"
 
 # Node.js für Windows (64 Bit) holen und Prüfsumme kontrollieren
 NODE_ZIP="node-$NODE_VERSION-win-x64.zip"

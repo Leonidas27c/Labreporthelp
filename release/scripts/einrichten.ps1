@@ -52,6 +52,10 @@ try {
     claude auth login
   }
 
+  Step 'Claude Desktop verbinden (falls installiert)'
+  & (Join-Path $root 'node\node.exe') (Join-Path $root 'scripts\claude-desktop.mjs') --nur-wenn-installiert
+  if ($LASTEXITCODE -ne 0) { Write-Host 'Claude Desktop konnte nicht verbunden werden (siehe oben). Der Chat in der App funktioniert trotzdem.' -ForegroundColor Yellow }
+
   Step 'Verknüpfung auf dem Desktop anlegen'
   $desktop = [Environment]::GetFolderPath('Desktop')
   $shell = New-Object -ComObject WScript.Shell

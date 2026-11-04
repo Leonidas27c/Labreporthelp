@@ -18,6 +18,25 @@ So startest du:
 Ab jetzt startest du immer über die Desktop-Verknüpfung oder
 "Labreporthelp starten.bat".
 
+Claude Desktop verbinden (MCP-Server)
+-------------------------------------
+Damit kannst du in der Claude-Desktop-App schreiben, z. B. "Erstelle in
+Labreporthelp eine Messwerttabelle mit Zeit [s] und Temperatur [°C]",
+und es erscheint in deinem Dokument.
+
+1. Claude Desktop von https://claude.ai/download installieren, einmal öffnen
+   und anmelden.
+2. "Claude Desktop verbinden.bat" doppelklicken. Das trägt Labreporthelp
+   in Claude Desktop ein (vorhandene Einträge bleiben erhalten).
+3. Claude Desktop ganz beenden (auch unten rechts neben der Uhr:
+   Rechtsklick auf das Claude-Symbol, "Beenden") und neu öffnen.
+4. Labreporthelp starten. Oben rechts in der App steht dann
+   "Claude Desktop verbunden".
+
+War Claude Desktop beim ersten Start schon installiert, ist das bereits
+passiert. Wenn du den Labreporthelp-Ordner verschiebst, die Datei
+"Claude Desktop verbinden.bat" noch einmal ausführen.
+
 Neu bei Claude anmelden: "Einrichtung wiederholen.bat" doppelklicken.
 
 Deine Dokumente: "Speichern" legt eine Datei zum Weiterbearbeiten an.
