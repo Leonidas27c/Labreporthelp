@@ -1,13 +1,21 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { DocumentTools } from './documentTools'
 
-export const MODEL = 'claude-opus-5-5'
+export const MODELS = [
+  { id: 'claude-haiku-5-5', label: 'Haiku 5.5 – schnell und sehr günstig' },
+  { id: 'claude-sonnet-5-5', label: 'Sonnet 5.5 – gute Mitte' },
+  { id: 'claude-opus-5-5', label: 'Opus 5.5 – sehr genau (Standard)' },
+  { id: 'claude-fable-5-1', label: 'Fable 5.1 – am stärksten, am teuersten' },
+] as const
+export type ModelId = (typeof MODELS)[number]['id']
+export const DEFAULT_MODEL: ModelId = 'claude-opus-5-5'
 
 const SYSTEM_PROMPT = `Du bist der Schreibassistent in „Labreporthelp“, einem Textprogramm für Laborprotokolle und wissenschaftliche Arbeiten.
 Die Person schreibt gerade ein Dokument und bittet dich im Chat um Hilfe.
 
 So arbeitest du:
 - Wenn die Person eine Tabelle, ein Diagrammfeld oder Text haben möchte, füge es mit den Werkzeugen direkt ins Dokument ein, statt es nur im Chat zu zeigen. Eingefügt wird an der Stelle, an der der Cursor steht.
+- Wenn die Person Dateien anhängt (z. B. eine Versuchsanleitung), entnimm ihnen die nötigen Angaben: welche Messgrößen, Einheiten, Messbereiche, Anzahl der Messungen, welche Diagramme mit welchen Achsen verlangt sind. Lege daraus passende Tabellen und Diagrammfelder an und nenne kurz, worauf du dich in der Datei stützt.
 - Wenn sich die Bitte auf vorhandenen Inhalt bezieht („die Messwerte oben“, „mein Text“), lies zuerst das Dokument mit get_document.
 - Tabellen: sinnvolle Spaltenköpfe mit Einheit in eckigen Klammern, z. B. „Zeit t [s]“. Zahlen im deutschen Format mit Komma. Erfinde keine Messwerte; wenn Werte fehlen, lege leere Zellen an.
 - Diagrammfelder sind leere Koordinatensysteme (Millimeterpapier) zum Einzeichnen. Messpunkte kann das Programm noch nicht zeichnen; sag das kurz, falls danach gefragt wird. Wähle Achsenbereiche, die zu den Daten passen.
@@ -101,6 +109,7 @@ export type ChatEvent =
  */
 export async function runChat(
   apiKey: string,
+  model: ModelId,
   history: Anthropic.Beta.BetaMessageParam[],
   tools: DocumentTools,
   onEvent: (e: ChatEvent) => void,
@@ -110,15 +119,17 @@ export async function runChat(
 
   for (let step = 0; step < 10; step++) {
     const response = await client.beta.messages.create({
-      model: MODEL,
+      model,
       max_tokens: 16000,
       system: SYSTEM_PROMPT,
       tools: TOOLS,
       messages: history,
       output_config: { effort: 'medium' },
       // Falls eine Anfrage abgelehnt wird, übernimmt automatisch ein passendes anderes Modell
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
+      // (für Haiku gibt es diese Möglichkeit nicht)
+      ...(model === 'claude-haiku-5-5'
+        ? {}
+        : { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const }),
     })
 
     history.push({ role: 'assistant', content: response.content })
