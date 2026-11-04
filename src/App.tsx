@@ -3,6 +3,9 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TextAlign from '@tiptap/extension-text-align'
 import { Toolbar } from './components/Toolbar'
+import { DrawLayer } from './components/DrawLayer'
+import { ChartNode } from './extensions/ChartNode'
+import { TablePlaceholderNode } from './extensions/TablePlaceholderNode'
 import {
   createDocument,
   downloadDocument,
@@ -17,10 +20,17 @@ export default function App() {
   const autosaved = useRef(loadAutosave())
   const [title, setTitle] = useState(autosaved.current?.title ?? 'Unbenannt')
   const [status, setStatus] = useState('')
+  const [drawing, setDrawing] = useState(false)
+  const stopDrawing = useCallback(() => setDrawing(false), [])
   const fileInput = useRef<HTMLInputElement>(null)
 
   const editor = useEditor({
-    extensions: [StarterKit, TextAlign.configure({ types: ['heading', 'paragraph'] })],
+    extensions: [
+      StarterKit,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      ChartNode,
+      TablePlaceholderNode,
+    ],
     content: autosaved.current?.content ?? EMPTY_CONTENT,
     editorProps: { attributes: { class: 'page', spellcheck: 'true' } },
   })
@@ -101,9 +111,20 @@ export default function App() {
         />
         <span className="status" aria-live="polite">{status}</span>
       </header>
-      <Toolbar editor={editor} onNew={handleNew} onOpen={handleOpen} onSave={handleSave} />
+      <Toolbar
+        editor={editor}
+        onNew={handleNew}
+        onOpen={handleOpen}
+        onSave={handleSave}
+        drawing={drawing}
+        onToggleDraw={() => setDrawing((d) => !d)}
+      />
       <main className="workspace">
-        <EditorContent editor={editor} />
+        <div className={`page-wrap${drawing ? ' drawing' : ''}`}>
+          <EditorContent editor={editor} />
+          <DrawLayer editor={editor} active={drawing} onDone={stopDrawing} />
+        </div>
+        {drawing && <div className="hint">Feld mit gedrückter linker Maustaste aufziehen · Esc zum Abbrechen</div>}
       </main>
       <input ref={fileInput} type="file" accept=".json,.lrh.json" hidden onChange={handleFile} />
     </div>

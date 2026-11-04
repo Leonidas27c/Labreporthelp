@@ -11,8 +11,14 @@ Ein Schreibprogramm für Laborprotokolle und wissenschaftliche Arbeiten: wie Wor
 - Speichern als Datei (`*.lrh.json`) und wieder Öffnen (auch mit Strg+S / Strg+O)
 - Automatisches Zwischenspeichern im Browser, damit beim Neuladen nichts verloren geht
 
+**Schritt 2 – Aufzieh-Werkzeug** (fertig)
+- Button „Aufziehen“ wählen, dann mit gedrückter linker Maustaste ein Feld aufziehen
+- Beim Loslassen erscheint ein Menü: „Diagramm“ oder „Tabelle“ (Esc bricht ab)
+- Das Diagramm füllt genau das gezogene Feld: kariert, mit x- und y-Achse
+- Am Griff unten rechts lässt sich das Feld größer ziehen, das Raster wächst mit
+- „Tabelle“ ist vorerst ein Platzhalter
+
 **Als Nächstes**
-2. Aufzieh-Werkzeug: Feld mit der Maus aufziehen → Menü „Tabelle“ / „Diagramm“
 3. Diagramm-Einstellungen: Achsen (Anzahl, Beschriftung, Einheit), Hintergrund (kariert, punktiert, blanko)
 4. Desktop-App für PC und Laptop
 
@@ -38,4 +44,10 @@ Ein Schreibprogramm für Laborprotokolle und wissenschaftliche Arbeiten: wie Wor
 
 - [React](https://react.dev) + TypeScript, gebaut mit [Vite](https://vite.dev)
 - Texteditor: [Tiptap](https://tiptap.dev)
-- Code: `src/App.tsx` (Hauptfenster), `src/components/Toolbar.tsx` (Werkzeugleiste), `src/lib/documentFile.ts` (Speichern/Öffnen)
+- Code:
+  - `src/App.tsx` – Hauptfenster
+  - `src/components/Toolbar.tsx` – Werkzeugleiste
+  - `src/components/DrawLayer.tsx` – Aufzieh-Werkzeug und Menü
+  - `src/components/ChartView.tsx`, `src/extensions/ChartNode.ts` – Diagrammfeld
+  - `src/components/TablePlaceholderView.tsx`, `src/extensions/TablePlaceholderNode.ts` – Tabellen-Platzhalter
+  - `src/lib/documentFile.ts` – Speichern/Öffnen
