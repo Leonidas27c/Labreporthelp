@@ -1,77 +1,116 @@
 import { useId } from 'react'
 import { NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react'
-import type { ChartAttrs } from '../extensions/ChartNode'
+import {
+  axisTicks,
+  axisTitle,
+  chartMargins,
+  formatNumber,
+  normalizeChart,
+} from '../lib/chartModel'
+import { contentWidth } from '../lib/insertPosition'
 import { useResize } from './useResize'
+import { useMove } from './useMove'
 
-const GRID = 20 // Kästchengröße in Pixeln
-const MARGIN = { left: 44, bottom: 36, top: 16, right: 16 }
+const INK = '#1d2330'
 
-export function ChartView({ node, updateAttributes, selected, editor }: ReactNodeViewProps) {
-  const a = node.attrs as ChartAttrs
+export function ChartView({ node, updateAttributes, selected, editor, getPos }: ReactNodeViewProps) {
+  const a = normalizeChart(node.attrs)
   const maxWidth = contentWidth(editor.view.dom) - a.offsetX
   const { size, resizing, handleProps } = useResize(a.width, a.height, maxWidth, updateAttributes)
-  const id = useId().replace(/:/g, '')
+  const { moving, moveStyle, moveProps } = useMove(editor, getPos, a.offsetX, a.width)
+  const id = useId().replace(/[^a-zA-Z0-9]/g, '')
 
   const { width: w, height: h } = size
-  const plotW = Math.max(0, w - MARGIN.left - MARGIN.right)
-  const plotH = Math.max(0, h - MARGIN.top - MARGIN.bottom)
-  const x0 = MARGIN.left
-  const y0 = h - MARGIN.bottom
+  const m = chartMargins(a)
+  const cell = Math.max(4, a.cellSize)
+  // Zeichenbereich auf ganze Kästchen runden, damit das Raster sauber endet
+  const plotW = Math.max(0, Math.floor((w - m.left - m.right) / cell) * cell)
+  const plotH = Math.max(0, Math.floor((h - m.top - m.bottom) / cell) * cell)
+  const x0 = m.left
+  const y0 = h - m.bottom
+  const xEnd = x0 + plotW
+  const top = y0 - plotH
+  const majorPx = cell * Math.max(1, a.majorEvery)
+
+  const xt = axisTicks(a.axes.x, plotW, majorPx)
+  const yt = axisTicks(a.axes.y, plotH, majorPx)
+  const y2t = axisTicks(a.axes.y2, plotH, majorPx)
 
   return (
     <NodeViewWrapper
-      className={`chart-node${selected ? ' selected' : ''}${resizing ? ' resizing' : ''}`}
-      style={{ width: w, height: h, marginLeft: a.offsetX }}
+      className={`chart-node${selected ? ' selected' : ''}${resizing ? ' resizing' : ''}${moving ? ' moving' : ''}`}
+      style={{ width: w, height: h, marginLeft: a.offsetX, ...moveStyle }}
       contentEditable={false}
+      draggable={false}
+      {...moveProps}
     >
       <svg width={w} height={h} className="chart-svg">
         <defs>
-          <pattern id={`grid-${id}`} width={GRID} height={GRID} patternUnits="userSpaceOnUse" x={x0} y={y0}>
-            <path d={`M ${GRID} 0 L 0 0 0 ${GRID}`} fill="none" stroke="#c9d3e3" strokeWidth="1" />
+          <pattern id={`grid-${id}`} width={cell} height={cell} patternUnits="userSpaceOnUse" x={x0} y={y0}>
+            <path d={`M ${cell} 0 L 0 0 0 ${cell}`} fill="none" stroke="#c9d3e3" strokeWidth="1" />
           </pattern>
-          <pattern id={`dots-${id}`} width={GRID} height={GRID} patternUnits="userSpaceOnUse" x={x0} y={y0}>
+          <pattern id={`dots-${id}`} width={cell} height={cell} patternUnits="userSpaceOnUse" x={x0} y={y0}>
             <circle cx="0" cy="0" r="1.3" fill="#9aa8bf" />
           </pattern>
+          <pattern id={`major-${id}`} width={majorPx} height={majorPx} patternUnits="userSpaceOnUse" x={x0} y={y0}>
+            <path d={`M ${majorPx} 0 L 0 0 0 ${majorPx}`} fill="none" stroke="#8d9bb3" strokeWidth="1.6" />
+          </pattern>
           <marker id={`arrow-${id}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#1d2330" />
+            <path d="M 0 0 L 10 5 L 0 10 z" fill={INK} />
           </marker>
         </defs>
 
         {/* Hintergrund des Zeichenbereichs: wächst beim Vergrößern einfach mit */}
         {a.background !== 'blank' && (
-          <rect
-            x={x0}
-            y={MARGIN.top}
-            width={plotW}
-            height={plotH}
-            fill={`url(#${a.background === 'dots' ? 'dots' : 'grid'}-${id})`}
-          />
+          <rect x={x0} y={top} width={plotW} height={plotH} fill={`url(#${a.background === 'dots' ? 'dots' : 'grid'}-${id})`} />
+        )}
+        {a.showMajorLines && a.background !== 'blank' && (
+          <rect x={x0} y={top} width={plotW} height={plotH} fill={`url(#major-${id})`} />
         )}
 
         {/* Achsen */}
-        <line x1={x0} y1={y0} x2={w - MARGIN.right + 6} y2={y0} stroke="#1d2330" strokeWidth="1.5" markerEnd={`url(#arrow-${id})`} />
-        <line x1={x0} y1={y0} x2={x0} y2={MARGIN.top - 6} stroke="#1d2330" strokeWidth="1.5" markerEnd={`url(#arrow-${id})`} />
+        {a.axisCount === 3 ? (
+          <line x1={x0} y1={y0} x2={xEnd} y2={y0} stroke={INK} strokeWidth="1.5" />
+        ) : (
+          <line x1={x0} y1={y0} x2={xEnd + 10} y2={y0} stroke={INK} strokeWidth="1.5" markerEnd={`url(#arrow-${id})`} />
+        )}
+        <line x1={x0} y1={y0} x2={x0} y2={top - 10} stroke={INK} strokeWidth="1.5" markerEnd={`url(#arrow-${id})`} />
+        {a.axisCount === 3 && (
+          <line x1={xEnd} y1={y0} x2={xEnd} y2={top - 10} stroke={INK} strokeWidth="1.5" markerEnd={`url(#arrow-${id})`} />
+        )}
 
-        {/* Beschriftungen */}
-        <text x={w - MARGIN.right} y={h - 10} textAnchor="end" className="axis-label">
-          {axisText(a.xLabel, a.xUnit)}
-        </text>
-        <text x={x0 - 8} y={MARGIN.top + 4} textAnchor="end" dominantBaseline="hanging" className="axis-label">
-          {axisText(a.yLabel, a.yUnit)}
-        </text>
+        {/* Abschnitte mit Zahlen */}
+        <g className="tick-label">
+          {xt.ticks.map((t) => (
+            <g key={`x${t.px}`}>
+              <line x1={x0 + t.px} y1={y0} x2={x0 + t.px} y2={y0 + 5} stroke={INK} />
+              <text x={x0 + t.px} y={y0 + 17} textAnchor="middle">{formatNumber(t.value)}</text>
+            </g>
+          ))}
+          {yt.ticks.map((t) => (
+            <g key={`y${t.px}`}>
+              <line x1={x0 - 5} y1={y0 - t.px} x2={x0} y2={y0 - t.px} stroke={INK} />
+              <text x={x0 - 8} y={y0 - t.px + 4} textAnchor="end">{formatNumber(t.value)}</text>
+            </g>
+          ))}
+          {a.axisCount === 3 &&
+            y2t.ticks.map((t) => (
+              <g key={`y2${t.px}`}>
+                <line x1={xEnd} y1={y0 - t.px} x2={xEnd + 5} y2={y0 - t.px} stroke={INK} />
+                <text x={xEnd + 8} y={y0 - t.px + 4} textAnchor="start">{formatNumber(t.value)}</text>
+              </g>
+            ))}
+        </g>
+
+        {/* Achsentitel */}
+        <text x={xEnd} y={h - 6} textAnchor="end" className="axis-label">{axisTitle(a.axes.x)}</text>
+        <text x={x0 + 8} y={top - 14} textAnchor="start" className="axis-label">{axisTitle(a.axes.y)}</text>
+        {a.axisCount === 3 && (
+          <text x={xEnd - 8} y={top - 14} textAnchor="end" className="axis-label">{axisTitle(a.axes.y2)}</text>
+        )}
       </svg>
       <div className="resize-handle" title="Ziehen zum Vergrößern" {...handleProps} />
       {resizing && <div className="size-badge">{Math.round(w)} × {Math.round(h)} px</div>}
     </NodeViewWrapper>
   )
-}
-
-function axisText(label: string, unit: string) {
-  return unit ? `${label} [${unit}]` : label
-}
-
-/** Breite des beschreibbaren Bereichs der Seite (ohne Seitenränder). */
-export function contentWidth(pageEl: HTMLElement) {
-  const cs = getComputedStyle(pageEl)
-  return pageEl.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
 }

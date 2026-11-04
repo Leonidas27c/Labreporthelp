@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
-import { contentWidth } from './ChartView'
+import { contentWidth, insertPosition } from '../lib/insertPosition'
 
 interface Rect {
   x: number
@@ -130,24 +130,6 @@ export function DrawLayer({ editor, active, onDone }: DrawLayerProps) {
       )}
     </div>
   )
-}
-
-/** Findet die Stelle im Dokument, an der das neue Feld eingefügt wird. */
-function insertPosition(editor: Editor, clientTop: number, clientLeft: number) {
-  const { view, state } = editor
-  const hit = view.posAtCoords({ left: clientLeft, top: clientTop })
-  if (!hit) {
-    // Über dem ersten Block: an den Anfang, sonst ans Ende
-    const first = view.dom.firstElementChild?.getBoundingClientRect()
-    return first && clientTop < first.top ? 0 : state.doc.content.size
-  }
-  const $pos = state.doc.resolve(hit.pos)
-  if ($pos.depth === 0) return hit.pos
-  const before = $pos.before(1)
-  const dom = view.nodeDOM(before) as HTMLElement | null
-  const box = dom?.getBoundingClientRect()
-  // Obere Hälfte des Absatzes: davor einfügen, sonst dahinter
-  return box && clientTop < box.top + box.height / 2 ? before : $pos.after(1)
 }
 
 function clamp(v: number, min: number, max: number) {
