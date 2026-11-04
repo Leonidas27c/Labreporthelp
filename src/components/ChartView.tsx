@@ -6,6 +6,7 @@ import {
   chartMargins,
   formatNumber,
   normalizeChart,
+  snapChartSize,
 } from '../lib/chartModel'
 import { contentWidth } from '../lib/insertPosition'
 import { useResize } from './useResize'
@@ -16,21 +17,21 @@ const INK = '#1d2330'
 export function ChartView({ node, updateAttributes, selected, editor, getPos }: ReactNodeViewProps) {
   const a = normalizeChart(node.attrs)
   const maxWidth = contentWidth(editor.view.dom) - a.offsetX
-  const { size, resizing, handleProps } = useResize(a.width, a.height, maxWidth, updateAttributes)
+  const { size, resizing, handleProps } = useResize(a.width, a.height, maxWidth, (s) => {
+    const snapped = snapChartSize(a, s.width, s.height, maxWidth)
+    updateAttributes({ width: snapped.width, height: snapped.height })
+  })
   const { moving, moveStyle, moveProps } = useMove(editor, getPos, a.offsetX, a.width)
   const id = useId().replace(/[^a-zA-Z0-9]/g, '')
 
-  const { width: w, height: h } = size
+  // Auf ganze Abschnitte einrasten: das Raster endet oben und rechts an einer dicken Linie
+  const { plotW, plotH, majorPx, width: w, height: h } = snapChartSize(a, size.width, size.height, maxWidth)
   const m = chartMargins(a)
   const cell = Math.max(4, a.cellSize)
-  // Zeichenbereich auf ganze Kästchen runden, damit das Raster sauber endet
-  const plotW = Math.max(0, Math.floor((w - m.left - m.right) / cell) * cell)
-  const plotH = Math.max(0, Math.floor((h - m.top - m.bottom) / cell) * cell)
   const x0 = m.left
   const y0 = h - m.bottom
   const xEnd = x0 + plotW
   const top = y0 - plotH
-  const majorPx = cell * Math.max(1, a.majorEvery)
 
   const xt = axisTicks(a.axes.x, plotW, majorPx)
   const yt = axisTicks(a.axes.y, plotH, majorPx)
@@ -55,9 +56,6 @@ export function ChartView({ node, updateAttributes, selected, editor, getPos }: 
           <pattern id={`major-${id}`} width={majorPx} height={majorPx} patternUnits="userSpaceOnUse" x={x0} y={y0}>
             <path d={`M ${majorPx} 0 L 0 0 0 ${majorPx}`} fill="none" stroke="#8d9bb3" strokeWidth="1.6" />
           </pattern>
-          <marker id={`arrow-${id}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill={INK} />
-          </marker>
         </defs>
 
         {/* Hintergrund des Zeichenbereichs: wächst beim Vergrößern einfach mit */}
@@ -68,16 +66,8 @@ export function ChartView({ node, updateAttributes, selected, editor, getPos }: 
           <rect x={x0} y={top} width={plotW} height={plotH} fill={`url(#major-${id})`} />
         )}
 
-        {/* Achsen */}
-        {a.axisCount === 3 ? (
-          <line x1={x0} y1={y0} x2={xEnd} y2={y0} stroke={INK} strokeWidth="1.5" />
-        ) : (
-          <line x1={x0} y1={y0} x2={xEnd + 10} y2={y0} stroke={INK} strokeWidth="1.5" markerEnd={`url(#arrow-${id})`} />
-        )}
-        <line x1={x0} y1={y0} x2={x0} y2={top - 10} stroke={INK} strokeWidth="1.5" markerEnd={`url(#arrow-${id})`} />
-        {a.axisCount === 3 && (
-          <line x1={xEnd} y1={y0} x2={xEnd} y2={top - 10} stroke={INK} strokeWidth="1.5" markerEnd={`url(#arrow-${id})`} />
-        )}
+        {/* Achsen und Rahmen: das Diagramm ist ringsum geschlossen */}
+        <rect x={x0} y={top} width={plotW} height={plotH} fill="none" stroke={INK} strokeWidth="1.5" />
 
         {/* Abschnitte mit Zahlen */}
         <g className="tick-label">

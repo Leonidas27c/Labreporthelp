@@ -114,3 +114,22 @@ export function normalizeChart(raw: Record<string, unknown>): ChartAttrs {
     },
   }
 }
+
+/**
+ * Rastet die Größe des Zeichenbereichs auf ganze Abschnitte ein, damit das
+ * Diagramm oben und rechts immer an einer dicken Linie endet. Die Kästchen
+ * bleiben dabei quadratisch (nichts wird gestaucht oder gestreckt), nur das
+ * Feld wird um höchstens einen halben Abschnitt größer oder kleiner.
+ */
+export function snapChartSize(a: ChartAttrs, width: number, height: number, maxWidth = Infinity) {
+  const m = chartMargins(a)
+  const majorPx = Math.max(4, a.cellSize) * Math.max(1, a.majorEvery)
+  const fit = (avail: number, limit: number) => {
+    let n = Math.max(1, Math.round(avail / majorPx))
+    if (n * majorPx > limit) n = Math.max(1, Math.floor(limit / majorPx))
+    return n * majorPx
+  }
+  const plotW = fit(width - m.left - m.right, maxWidth - m.left - m.right)
+  const plotH = fit(height - m.top - m.bottom, Infinity)
+  return { plotW, plotH, majorPx, width: plotW + m.left + m.right, height: plotH + m.top + m.bottom }
+}

@@ -3,9 +3,9 @@ import type { Editor } from '@tiptap/react'
 import { NodeSelection } from '@tiptap/pm/state'
 import {
   axisTicks,
-  chartMargins,
   formatNumber,
   normalizeChart,
+  snapChartSize,
   type AxisKey,
   type AxisSettings,
   type ChartAttrs,
@@ -40,11 +40,9 @@ export function ChartPanel({ editor, pos, attrs }: ChartPanelProps) {
   const remove = () => editor.chain().focus().deleteSelection().run()
 
   // Vorschau der Abschnitte der gerade gewählten Achse
-  const m = chartMargins(a)
-  const cell = Math.max(4, a.cellSize)
-  const majorPx = cell * Math.max(1, a.majorEvery)
-  const raw = axisKey === 'x' ? a.width - m.left - m.right : a.height - m.top - m.bottom
-  const length = Math.floor(raw / cell) * cell
+  const snapped = snapChartSize(a, a.width, a.height)
+  const majorPx = snapped.majorPx
+  const length = axisKey === 'x' ? snapped.plotW : snapped.plotH
   const { ticks } = axisTicks(axis, length, majorPx)
   const preview = ticks.length > 6
     ? [...ticks.slice(0, 4).map((t) => formatNumber(t.value)), '…', formatNumber(ticks[ticks.length - 1].value)]
