@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
 import { DocumentTools } from '../lib/documentTools'
-import { DEFAULT_MODEL, MODELS, NeedsDesktopError, NeedsLoginError, aboLogin, connectDesktop, aboStatus, runAboChat, type AboStatus, type ModelId } from '../lib/aboChat'
+import { DEFAULT_MODEL, MODELS, NeedsDesktopError, NeedsLoginError, aboLogin, connectDesktop, desktopSnippet, aboStatus, runAboChat, type AboStatus, type ModelId } from '../lib/aboChat'
 import { ACCEPT, readAttachment, type Attachment } from '../lib/attachments'
 
 const MODEL_STORAGE = 'labreporthelp:model'
@@ -47,6 +47,8 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
   const [loginError, setLoginError] = useState<string | null>(null)
   const [showDesktop, setShowDesktop] = useState(false)
   const [desktopMsg, setDesktopMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [snippet, setSnippet] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const sessionId = useRef<string | null>(null)
   const tools = useMemo(() => new DocumentTools(editor), [editor])
   const listEnd = useRef<HTMLDivElement>(null)
@@ -208,8 +210,37 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
             <br />
             2. Hier verbinden:
           </p>
-          <button className="primary" onClick={() => connectDesktop().then(setDesktopMsg)}>Mit Claude Desktop verbinden</button>
+          <button className="primary" onClick={() =>
+              connectDesktop().then((m) => {
+                setDesktopMsg(m)
+                if (!m.ok) desktopSnippet().then(setSnippet)
+              })
+            }>Mit Claude Desktop verbinden</button>
           {desktopMsg && <p className="help">{desktopMsg.text}</p>}
+          <p className="help">
+            Klappt es nicht?{' '}
+            <button className="link-btn" onClick={() => desktopSnippet().then(setSnippet)}>Von Hand eintragen</button>
+          </p>
+          {snippet !== null && (
+            <div className="help">
+              <p>
+                In Claude Desktop: Einstellungen → Entwickler → „Konfiguration bearbeiten“. Die Datei öffnet sich (z. B. im Editor).
+                Ist sie leer oder steht nur <code>{'{}'}</code> drin, den ganzen Inhalt durch diesen Text ersetzen. Steht schon etwas drin, schick ein Foto davon an Claude.
+                Speichern, Claude Desktop ganz beenden und neu öffnen.
+              </p>
+              <textarea className="snippet" readOnly value={snippet} rows={8} onFocus={(e) => e.target.select()} />
+              <button
+                onClick={() =>
+                  navigator.clipboard.writeText(snippet).then(
+                    () => setCopied(true),
+                    () => setCopied(false),
+                  )
+                }
+              >
+                {copied ? 'Kopiert ✓' : 'Text kopieren'}
+              </button>
+            </div>
+          )}
         </section>
       )}
 
