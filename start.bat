@@ -13,9 +13,14 @@ if not exist "node_modules" (
   pause
   exit /b 1
 )
-if not exist "dist\index.html" (
-  echo Labreporthelp wird vorbereitet ...
-  call npm run build
+rem Bei jedem Start neu bauen, damit nach einem Update nicht die alte Fassung laeuft
+echo Labreporthelp wird vorbereitet ...
+call npm install --prefer-offline --no-audit --no-fund >nul 2>nul
+call npm run build >nul
+if errorlevel 1 (
+  echo Vorbereiten ist fehlgeschlagen. Bitte install.bat noch einmal ausfuehren.
+  pause
+  exit /b 1
 )
 echo.
 echo Labreporthelp laeuft unter http://localhost:5173
