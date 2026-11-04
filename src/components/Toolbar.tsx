@@ -6,9 +6,11 @@ interface ToolbarProps {
   onNew: () => void
   onOpen: () => void
   onSave: () => void
+  drawing: boolean
+  onToggleDraw: () => void
 }
 
-export function Toolbar({ editor, onNew, onOpen, onSave }: ToolbarProps) {
+export function Toolbar({ editor, onNew, onOpen, onSave, drawing, onToggleDraw }: ToolbarProps) {
   // Aktiven Zustand der Buttons bei jeder Änderung neu berechnen
   const s = useEditorState({
     editor,
@@ -63,6 +65,15 @@ export function Toolbar({ editor, onNew, onOpen, onSave }: ToolbarProps) {
         <button className={s.center ? 'active' : ''} onClick={() => chain().setTextAlign('center').run()} title="Zentriert">≡</button>
         <button className={s.right ? 'active' : ''} onClick={() => chain().setTextAlign('right').run()} title="Rechtsbündig">⯈</button>
         <button className={s.justify ? 'active' : ''} onClick={() => chain().setTextAlign('justify').run()} title="Blocksatz">☰</button>
+      </div>
+      <div className="group">
+        <button
+          className={`draw-tool${drawing ? ' active' : ''}`}
+          onClick={onToggleDraw}
+          title="Feld aufziehen: danach Diagramm oder Tabelle wählen"
+        >
+          ⬚ Aufziehen
+        </button>
       </div>
     </div>
   )
