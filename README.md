@@ -63,11 +63,35 @@ Einrichtung (einmalig):
 2. Ein neues Terminal öffnen, `claude` eingeben und mit deinem Claude-Konto anmelden. Danach mit `/exit` beenden.
 3. `npm run dev` (neu) starten. Fertig.
 
+**Schrift und Farben**
+- Schriftfarbe (A) und Textmarker (✎) in der Werkzeugleiste
+- Zwei Paletten: „Wissenschaft klassisch“ (gedeckte, dunkle Töne) und „Okabe-Ito“ (auch bei Farbsehschwäche unterscheidbar), dazu eigene Farben
+
+**Drucken und PDF**
+- „Drucken / PDF“ (Strg+P) druckt nur die Seite, ohne Werkzeugleiste, im A4-Format mit Seitenrändern
+
 **Tabellen**
 - „Aufziehen“ → „Tabelle“ fügt jetzt eine echte Tabelle mit Kopfzeile ein (Größe passend zum Feld)
 
 **Als Nächstes**
 4. Desktop-App für PC und Laptop
+
+## Auf einem neuen PC oder Laptop installieren (Windows)
+
+1. Auf GitHub oben auf „Code“ → „Download ZIP“ klicken und die ZIP-Datei entpacken,
+   z. B. nach `Dokumente\Labreporthelp`.
+2. Im entpackten Ordner **`install.bat`** doppelklicken. Das Skript
+   - installiert Node.js und Claude Code, falls sie fehlen,
+   - richtet das Programm ein,
+   - öffnet die Anmeldung bei Claude (dein Konto mit Pro oder Max),
+   - legt eine Verknüpfung „Labreporthelp“ auf dem Desktop an.
+   Falls Windows „Der Computer wurde durch Windows geschützt“ meldet: „Weitere Informationen“ → „Trotzdem ausführen“.
+3. Danach startest du immer mit **`start.bat`** oder der Desktop-Verknüpfung.
+   Der Browser öffnet sich von selbst. Das schwarze Fenster offen lassen, solange du arbeitest.
+
+Deine Dokumente: „Speichern“ legt eine Datei zum Weiterbearbeiten an (nimm sie z. B. per USB-Stick oder Cloud mit).
+„Drucken / PDF“ öffnet den Druckdialog. Dort als Drucker „Als PDF speichern“ bzw. „Microsoft Print to PDF“ wählen,
+um ein PDF zu bekommen.
 
 ## Starten (für Einsteiger)
 

@@ -1,18 +1,20 @@
 import type { Editor } from '@tiptap/react'
 import { useEditorState } from '@tiptap/react'
+import { ColorMenu } from './ColorMenu'
 
 interface ToolbarProps {
   editor: Editor
   onNew: () => void
   onOpen: () => void
   onSave: () => void
+  onPrint: () => void
   drawing: boolean
   onToggleDraw: () => void
   chatOpen: boolean
   onToggleChat: () => void
 }
 
-export function Toolbar({ editor, onNew, onOpen, onSave, drawing, onToggleDraw, chatOpen, onToggleChat }: ToolbarProps) {
+export function Toolbar({ editor, onNew, onOpen, onSave, onPrint, drawing, onToggleDraw, chatOpen, onToggleChat }: ToolbarProps) {
   // Aktiven Zustand der Buttons bei jeder Änderung neu berechnen
   const s = useEditorState({
     editor,
@@ -41,7 +43,8 @@ export function Toolbar({ editor, onNew, onOpen, onSave, drawing, onToggleDraw, 
       <div className="group">
         <button onClick={onNew} title="Neues Dokument">Neu</button>
         <button onClick={onOpen} title="Dokument öffnen (Strg+O)">Öffnen</button>
-        <button onClick={onSave} title="Dokument speichern (Strg+S)">Speichern</button>
+        <button onClick={onSave} title="Dokument speichern (Strg+S), zum späteren Weiterbearbeiten">Speichern</button>
+        <button onClick={onPrint} title="Drucken oder als PDF speichern (Strg+P)">Drucken / PDF</button>
       </div>
       <div className="group">
         <button disabled={!s.canUndo} onClick={() => chain().undo().run()} title="Rückgängig (Strg+Z)">↶</button>
@@ -52,6 +55,8 @@ export function Toolbar({ editor, onNew, onOpen, onSave, drawing, onToggleDraw, 
         <button className={s.italic ? 'active' : ''} onClick={() => chain().toggleItalic().run()} title="Kursiv (Strg+I)"><i>K</i></button>
         <button className={s.underline ? 'active' : ''} onClick={() => chain().toggleUnderline().run()} title="Unterstrichen (Strg+U)"><u>U</u></button>
         <button className={s.strike ? 'active' : ''} onClick={() => chain().toggleStrike().run()} title="Durchgestrichen"><s>S</s></button>
+        <ColorMenu editor={editor} kind="text" />
+        <ColorMenu editor={editor} kind="highlight" />
       </div>
       <div className="group">
         <button className={s.h1 ? 'active' : ''} onClick={() => chain().toggleHeading({ level: 1 }).run()} title="Überschrift 1">Ü1</button>

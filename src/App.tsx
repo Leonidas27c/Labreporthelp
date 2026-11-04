@@ -4,6 +4,8 @@ import { NodeSelection } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
 import TextAlign from '@tiptap/extension-text-align'
 import { TableKit } from '@tiptap/extension-table'
+import { TextStyle, Color } from '@tiptap/extension-text-style'
+import Highlight from '@tiptap/extension-highlight'
 import { Toolbar } from './components/Toolbar'
 import { DrawLayer } from './components/DrawLayer'
 import { ChartPanel } from './components/ChartPanel'
@@ -35,6 +37,9 @@ export default function App() {
       StarterKit,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       TableKit.configure({ table: { resizable: false } }),
+      TextStyle,
+      Color,
+      Highlight.configure({ multicolor: true }),
       ChartNode,
       TablePlaceholderNode,
     ],
@@ -87,7 +92,22 @@ export default function App() {
     }
   }
 
-  // Tastenkürzel Strg+S und Strg+O
+  // Drucken bzw. als PDF speichern über den Druckdialog des Browsers
+  const handlePrint = useCallback(() => {
+    if (!editor) return
+    // Auswahl aufheben, damit kein Auswahlrahmen mitgedruckt wird
+    editor.commands.setTextSelection(editor.state.selection.to)
+    const previous = document.title
+    document.title = title || 'Labreporthelp' // wird als Dateiname für das PDF vorgeschlagen
+    const restore = () => {
+      document.title = previous
+      window.removeEventListener('afterprint', restore)
+    }
+    window.addEventListener('afterprint', restore)
+    window.setTimeout(() => window.print(), 50)
+  }, [editor, title])
+
+  // Tastenkürzel Strg+S, Strg+O und Strg+P
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return
@@ -98,11 +118,14 @@ export default function App() {
       } else if (key === 'o') {
         e.preventDefault()
         handleOpen()
+      } else if (key === 'p') {
+        e.preventDefault()
+        handlePrint()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [handleSave, handleOpen])
+  }, [handleSave, handleOpen, handlePrint])
 
   const desktopConnected = useDesktopBridge(editor)
 
@@ -145,6 +168,7 @@ export default function App() {
         onNew={handleNew}
         onOpen={handleOpen}
         onSave={handleSave}
+        onPrint={handlePrint}
         drawing={drawing}
         onToggleDraw={() => setDrawing((d) => !d)}
         chatOpen={chatOpen}
