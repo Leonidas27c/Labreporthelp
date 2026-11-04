@@ -19,8 +19,11 @@ So verbindest du Claude Desktop mit Labreporthelp:
 
 1. In Claude Desktop: Einstellungen → Entwickler → „Konfiguration bearbeiten“.
    (Die Datei liegt hier: ${configFile})
-2. Diesen Inhalt eintragen. Falls dort schon "mcpServers" steht, nur den
-   Eintrag "labreporthelp" ergänzen:
+2. Diesen Inhalt eintragen. Wichtig: "mcpServers" gehört auf die oberste
+   Ebene der Datei, also NICHT in den Block "preferences" hinein.
+   Steht in der Datei schon anderes, füge "mcpServers" direkt nach der ersten
+   geschweiften Klammer { ein (mit Komma dahinter). Falls dort schon
+   "mcpServers" steht, nur den Eintrag "labreporthelp" ergänzen:
 
 ${JSON.stringify(config, null, 2)}
 
