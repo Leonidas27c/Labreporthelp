@@ -22,15 +22,38 @@ const ALLOWED_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/
 let app = null // aktuell verbundene App
 const pending = new Map()
 let nextId = 1
+// Für verständliche Fehlermeldungen festhalten, was mit der Brücke los ist
+let bridgeState = 'startet'
+let lastRejectedOrigin = null
 
-const wss = new WebSocketServer({
-  host: '127.0.0.1',
-  port: PORT,
-  verifyClient: ({ origin }) => !origin || ALLOWED_ORIGIN.test(origin),
-})
-wss.on('error', (err) => console.error(`[labreporthelp] Brücke konnte nicht starten: ${err.message}`))
-wss.on('listening', () => console.error(`[labreporthelp] Warte auf die App unter ws://127.0.0.1:${PORT}`))
-wss.on('connection', (socket) => {
+/** Startet die WebSocket-Brücke. Ist der Anschluss belegt, wird es alle 5 s erneut versucht. */
+function startBridge() {
+  const wss = new WebSocketServer({
+    host: '127.0.0.1',
+    port: PORT,
+    verifyClient: ({ origin }) => {
+      const ok = !origin || ALLOWED_ORIGIN.test(origin)
+      if (!ok) {
+        lastRejectedOrigin = origin
+        console.error(`[labreporthelp] Verbindung von ${origin} abgelehnt (nur localhost erlaubt)`)
+      }
+      return ok
+    },
+  })
+  wss.on('error', (err) => {
+    bridgeState = `Anschluss ${PORT} nicht verfügbar (${err.code ?? err.message})`
+    console.error(`[labreporthelp] Brücke konnte nicht starten: ${err.message}. Neuer Versuch in 5 s.`)
+    wss.close()
+    setTimeout(startBridge, 5000)
+  })
+  wss.on('listening', () => {
+    bridgeState = 'bereit'
+    console.error(`[labreporthelp] Warte auf die App unter ws://127.0.0.1:${PORT}`)
+  })
+  wss.on('connection', onConnection)
+}
+
+function onConnection(socket) {
   app?.close()
   app = socket
   console.error('[labreporthelp] App verbunden')
@@ -51,12 +74,17 @@ wss.on('connection', (socket) => {
     if (app === socket) app = null
     console.error('[labreporthelp] App getrennt')
   })
-})
+}
+startBridge()
 
 function callApp(tool, input) {
   if (!app || app.readyState !== app.OPEN) {
+    let detail = `Brücke: ${bridgeState}.`
+    if (lastRejectedOrigin) detail += ` Zuletzt abgelehnte Verbindung von ${lastRejectedOrigin}.`
     return Promise.reject(
-      new Error('Labreporthelp ist nicht geöffnet. Bitte die App starten (npm run dev) und im Browser öffnen.'),
+      new Error(
+        `Labreporthelp ist nicht verbunden. Bitte die App starten (npm run dev), unter http://localhost:5173 öffnen und die Seite neu laden. (${detail})`,
+      ),
     )
   }
   const id = nextId++
