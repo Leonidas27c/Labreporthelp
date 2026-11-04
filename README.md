@@ -30,6 +30,18 @@ Ein Schreibprogramm für Laborprotokolle und wissenschaftliche Arbeiten: wie Wor
 - Diagramm mit der Maus verschieben: seitlich und an eine andere Stelle im Text
 - Das Diagramm rastet auf ganze Abschnitte ein und ist ringsum mit einem Rahmen geschlossen (Kästchen bleiben quadratisch)
 
+**Claude im Chat** (neu)
+- Button „✦ Claude“ oben rechts öffnet den Chat
+- Claude fügt an der Cursorposition Tabellen, Diagrammfelder und Text ein, z. B.
+  „Erstelle eine Messwerttabelle mit Zeit [s] und Temperatur [°C], 10 Zeilen“
+- Claude kann das Dokument lesen, wenn du dich auf vorhandenen Inhalt beziehst
+- Beim ersten Öffnen gibst du deinen Anthropic API-Schlüssel ein
+  (<https://console.anthropic.com/settings/keys>). Er bleibt nur in deinem Browser.
+  Jede Anfrage kostet ein paar Cent.
+
+**Tabellen**
+- „Aufziehen“ → „Tabelle“ fügt jetzt eine echte Tabelle mit Kopfzeile ein (Größe passend zum Feld)
+
 **Als Nächstes**
 4. Desktop-App für PC und Laptop
 
@@ -64,3 +76,6 @@ Ein Schreibprogramm für Laborprotokolle und wissenschaftliche Arbeiten: wie Wor
   - `src/lib/chartModel.ts` – Einstellungen und Berechnung der Abschnitte
   - `src/components/TablePlaceholderView.tsx`, `src/extensions/TablePlaceholderNode.ts` – Tabellen-Platzhalter
   - `src/lib/documentFile.ts` – Speichern/Öffnen
+  - `src/components/ChatPanel.tsx` – Chat mit Claude
+  - `src/lib/claude.ts` – Anfrage an Claude und Werkzeuge
+  - `src/lib/documentTools.ts` – was Claude im Dokument tun kann
