@@ -31,8 +31,18 @@ function configDirs() {
  * Trägt den Server ein. Ergebnis: { ok, notInstalled?, files, messages }.
  * Befehl ist das Node.js, mit dem gerade gearbeitet wird (im Release-Paket node\node.exe).
  */
+/** Der Eintrag für "mcpServers", wie er in claude_desktop_config.json stehen muss. */
+export function desktopEntry() {
+  return { command: process.execPath, args: [join(ROOT, 'mcp', 'server.mjs')] }
+}
+
+/** Ganzer Inhalt zum Einfügen, wenn die Datei noch leer ist. */
+export function desktopSnippet() {
+  return JSON.stringify({ mcpServers: { labreporthelp: desktopEntry() } }, null, 2)
+}
+
 export function connectClaudeDesktop() {
-  const entry = { command: process.execPath, args: [join(ROOT, 'mcp', 'server.mjs')] }
+  const entry = desktopEntry()
   const existing = configDirs().filter((d) => existsSync(d))
   if (!existing.length) {
     return {

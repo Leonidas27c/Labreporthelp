@@ -35,7 +35,7 @@ export async function connectDesktop(): Promise<{ ok: boolean; text: string }> {
     if (data.ok) {
       return {
         ok: true,
-        text: 'Eingetragen. Jetzt Claude Desktop ganz beenden (auch unten rechts neben der Uhr: Rechtsklick auf das Claude-Symbol, „Beenden“) und neu öffnen. Dann steht oben „Claude Desktop verbunden“.',
+        text: `Eingetragen in: ${(data.files ?? []).join(', ')}. Jetzt Claude Desktop ganz beenden (auch unten rechts neben der Uhr: Rechtsklick auf das Claude-Symbol, „Beenden“) und neu öffnen. Dann steht oben „Claude Desktop verbunden“, und in Claude Desktop unter Einstellungen → Entwickler „labreporthelp“.`,
       }
     }
     return { ok: false, text: (data.messages ?? []).join(' ') || data.error || 'Das hat nicht geklappt.' }
@@ -145,4 +145,14 @@ export async function runAboChat(opts: {
   }
   if (reply.broken) onEvent({ type: 'action', label: 'Ein Teil der Antwort konnte nicht eingefügt werden', ok: false })
   return data.sessionId ?? null
+}
+
+/** Text für die Claude-Desktop-Konfiguration zum Kopieren (mit den richtigen Pfaden für diesen Rechner). */
+export async function desktopSnippet(): Promise<string> {
+  try {
+    const r = await fetch('/api/desktop/snippet')
+    return String((await r.json()).snippet ?? '')
+  } catch {
+    return ''
+  }
 }

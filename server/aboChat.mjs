@@ -7,7 +7,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { connectClaudeDesktop } from './desktopConfig.mjs'
+import { connectClaudeDesktop, desktopSnippet } from './desktopConfig.mjs'
 
 const WORK_DIR = join(tmpdir(), 'labreporthelp-chat')
 const MODELS = new Set(['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1'])
@@ -247,6 +247,7 @@ export function middleware(req, res, next) {
     if (!origin) return send(res, 403, { error: 'Nicht erlaubt.' })
     return login(res)
   }
+  if (url === '/api/desktop/snippet' && req.method === 'GET') return send(res, 200, { snippet: desktopSnippet() })
   if (url === '/api/desktop/connect' && req.method === 'POST') {
     if (!origin) return send(res, 403, { error: 'Nicht erlaubt.' })
     try {
