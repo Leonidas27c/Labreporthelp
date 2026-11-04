@@ -79,6 +79,16 @@ Einrichtung (einmalig):
 
 ## Auf einem neuen PC oder Laptop installieren (Windows)
 
+**Am einfachsten: das fertige Paket aus „Releases“** (rechts auf der GitHub-Seite)
+1. Beim neuesten Release **`Labreporthelp-windows.zip`** herunterladen und entpacken (Rechtsklick → „Alle extrahieren“).
+2. **`Labreporthelp starten.bat`** doppelklicken. Node.js ist schon dabei. Beim ersten Start werden Git und
+   Claude Code eingerichtet, und du meldest dich bei Claude an. Danach öffnet sich die App im Browser.
+
+Für Entwickler: Ein neues Release entsteht, wenn ein Tag wie `v0.1.0` gepusht wird
+(`.github/workflows/release.yml` baut dann das Paket mit `scripts/package-release.sh`).
+
+**Oder aus dem Quellcode** (braucht mehr Installation)
+
 1. Auf GitHub oben auf „Code“ → „Download ZIP“ klicken und die ZIP-Datei entpacken,
    z. B. nach `Dokumente\Labreporthelp`.
 2. Im entpackten Ordner **`install.bat`** doppelklicken. Das Skript
