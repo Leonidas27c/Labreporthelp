@@ -28,6 +28,7 @@ Ein Schreibprogramm für Laborprotokolle und wissenschaftliche Arbeiten: wie Wor
 - Dicke Linie und Zahl alle N Kästchen (Standard: alle 5)
 - Breite und Höhe als Zahl eingeben, Diagramm löschen
 - Diagramm mit der Maus verschieben: seitlich und an eine andere Stelle im Text
+- Das Diagramm rastet auf ganze Abschnitte ein und ist ringsum mit einem Rahmen geschlossen (Kästchen bleiben quadratisch)
 
 **Als Nächstes**
 4. Desktop-App für PC und Laptop
