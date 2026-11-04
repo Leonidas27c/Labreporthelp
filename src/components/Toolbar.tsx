@@ -8,9 +8,11 @@ interface ToolbarProps {
   onSave: () => void
   drawing: boolean
   onToggleDraw: () => void
+  chatOpen: boolean
+  onToggleChat: () => void
 }
 
-export function Toolbar({ editor, onNew, onOpen, onSave, drawing, onToggleDraw }: ToolbarProps) {
+export function Toolbar({ editor, onNew, onOpen, onSave, drawing, onToggleDraw, chatOpen, onToggleChat }: ToolbarProps) {
   // Aktiven Zustand der Buttons bei jeder Änderung neu berechnen
   const s = useEditorState({
     editor,
@@ -73,6 +75,11 @@ export function Toolbar({ editor, onNew, onOpen, onSave, drawing, onToggleDraw }
           title="Feld aufziehen: danach Diagramm oder Tabelle wählen"
         >
           ⬚ Aufziehen
+        </button>
+      </div>
+      <div className="group push-right">
+        <button className={`claude-btn${chatOpen ? ' active' : ''}`} onClick={onToggleChat} title="Chat mit Claude öffnen">
+          ✦ Claude
         </button>
       </div>
     </div>

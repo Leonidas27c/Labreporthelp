@@ -151,3 +151,57 @@ html, body, #root { margin: 0; height: 100%; }
   margin-top: 12px; width: 100%; font: inherit; padding: 7px; border-radius: 6px; cursor: pointer;
   border: 1px solid #e3b4b4; background: #fff5f5; color: #b42318;
 }
+
+/* ---------- Tabellen ---------- */
+.page table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; table-layout: fixed; }
+.page th, .page td { border: 1px solid #8d9bb3; padding: 3pt 6pt; vertical-align: top; min-width: 40px; }
+.page th { background: #eef2f8; font-weight: 600; text-align: left; }
+.page td p, .page th p { margin: 0; }
+.page .selectedCell { background: var(--accent-soft); }
+
+/* ---------- Claude-Chat ---------- */
+.toolbar .push-right { margin-left: auto; border-left: 0 !important; }
+.toolbar .claude-btn { color: #b4532a; font-weight: 600; }
+.toolbar .claude-btn.active { background: #fbeee6; border-color: #d97757; color: #b4532a; }
+.chat-panel { width: 340px; display: flex; flex-direction: column; padding-bottom: 12px; }
+.chat-head { display: flex; align-items: center; justify-content: space-between; }
+.chat-head h2 { margin: 4px 0; color: #b4532a; }
+.chat-head-actions { display: flex; gap: 2px; }
+.chat-head-actions button {
+  font: inherit; font-size: 13px; border: 1px solid transparent; background: transparent;
+  border-radius: 6px; padding: 3px 7px; cursor: pointer; color: var(--text);
+}
+.chat-head-actions button:hover:not(:disabled) { background: var(--bg); }
+.chat-settings { display: flex; flex-direction: column; gap: 8px; }
+.chat-settings input {
+  font: inherit; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; width: 100%;
+}
+.chat-settings a { color: var(--accent); }
+.chat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--border); }
+.chat-empty p { color: var(--muted); margin: 0 0 8px; }
+.chat-empty .example {
+  display: block; width: 100%; text-align: left; font: inherit; font-size: 12.5px; margin-bottom: 6px;
+  padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer;
+}
+.chat-empty .example:hover { border-color: #d97757; background: #fdf6f2; }
+.chat-msg { padding: 7px 10px; border-radius: 10px; white-space: pre-wrap; line-height: 1.45; max-width: 92%; }
+.chat-msg.user { align-self: flex-end; background: var(--accent-soft); }
+.chat-msg.assistant { align-self: flex-start; background: var(--bg); }
+.chat-msg.action { align-self: flex-start; font-size: 12px; color: #1e7a46; background: #eaf7ef; padding: 3px 8px; }
+.chat-msg.action.failed { color: #b42318; background: #fff1f1; }
+.chat-msg.error { align-self: stretch; color: #b42318; background: #fff5f5; border: 1px solid #f1c4c4; }
+.chat-msg.typing { color: var(--muted); font-style: italic; }
+.chat-input { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); padding-top: 10px; }
+.chat-input textarea {
+  font: inherit; resize: vertical; padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; width: 100%;
+}
+.side-panel button.primary {
+  font: inherit; padding: 6px 12px; border: 0; border-radius: 6px; background: #d97757; color: #fff; cursor: pointer; align-self: flex-end;
+}
+.side-panel button.primary:disabled { opacity: 0.45; cursor: default; }
+
+/* Verbindungsanzeige Claude Desktop */
+.desktop-status { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.desktop-status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #c3c8d1; }
+.desktop-status.on { color: #1e7a46; }
+.desktop-status.on::before { background: #22a05a; }

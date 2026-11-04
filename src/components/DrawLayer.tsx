@@ -79,7 +79,7 @@ export function DrawLayer({ editor, active, onDone }: DrawLayerProps) {
     setMenuOpen(true)
   }
 
-  const insert = (type: 'chart' | 'tablePlaceholder') => {
+  const insert = (type: 'chart' | 'table') => {
     if (!rect) return
     const layerBox = layer.current!.getBoundingClientRect()
     const page = editor.view.dom
@@ -93,12 +93,13 @@ export function DrawLayer({ editor, active, onDone }: DrawLayerProps) {
     const pos = insertPosition(editor, layerBox.top + rect.y, contentLeft + 1)
     const atEnd = pos >= editor.state.doc.content.size
 
+    const node =
+      type === 'chart'
+        ? { type, attrs: { width, height: Math.round(rect.h), offsetX } }
+        : emptyTable(Math.max(2, Math.round(width / 110)), Math.max(2, Math.round(rect.h / 32)))
     editor
       .chain()
-      .insertContentAt(pos, [
-        { type, attrs: { width, height: Math.round(rect.h), offsetX } },
-        ...(atEnd ? [{ type: 'paragraph' }] : []),
-      ])
+      .insertContentAt(pos, [node, ...(atEnd ? [{ type: 'paragraph' }] : [])])
       .run()
     reset()
     onDone()
@@ -124,12 +125,24 @@ export function DrawLayer({ editor, active, onDone }: DrawLayerProps) {
           onPointerDown={(e) => e.stopPropagation()}
         >
           <button onClick={() => insert('chart')}>📈 Diagramm</button>
-          <button onClick={() => insert('tablePlaceholder')}>▦ Tabelle</button>
+          <button onClick={() => insert('table')}>▦ Tabelle</button>
           <button className="cancel" onClick={reset}>Abbrechen</button>
         </div>
       )}
     </div>
   )
+}
+
+/** Leere Tabelle mit Kopfzeile in der ungefähr aufgezogenen Größe. */
+function emptyTable(cols: number, rows: number) {
+  const cell = (type: string) => ({ type, content: [{ type: 'paragraph' }] })
+  return {
+    type: 'table',
+    content: Array.from({ length: rows }, (_, r) => ({
+      type: 'tableRow',
+      content: Array.from({ length: cols }, () => cell(r === 0 ? 'tableHeader' : 'tableCell')),
+    })),
+  }
 }
 
 function clamp(v: number, min: number, max: number) {

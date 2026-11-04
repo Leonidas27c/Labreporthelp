@@ -3,9 +3,12 @@ import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
 import { NodeSelection } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
 import TextAlign from '@tiptap/extension-text-align'
+import { TableKit } from '@tiptap/extension-table'
 import { Toolbar } from './components/Toolbar'
 import { DrawLayer } from './components/DrawLayer'
 import { ChartPanel } from './components/ChartPanel'
+import { ChatPanel } from './components/ChatPanel'
+import { useDesktopBridge } from './lib/desktopBridge'
 import { ChartNode } from './extensions/ChartNode'
 import { TablePlaceholderNode } from './extensions/TablePlaceholderNode'
 import {
@@ -24,12 +27,14 @@ export default function App() {
   const [status, setStatus] = useState('')
   const [drawing, setDrawing] = useState(false)
   const stopDrawing = useCallback(() => setDrawing(false), [])
+  const [chatOpen, setChatOpen] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
   const editor = useEditor({
     extensions: [
       StarterKit,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      TableKit.configure({ table: { resizable: false } }),
       ChartNode,
       TablePlaceholderNode,
     ],
@@ -99,6 +104,8 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [handleSave, handleOpen])
 
+  const desktopConnected = useDesktopBridge(editor)
+
   // Ist gerade ein Diagramm ausgewählt? Dann die Seitenleiste zeigen.
   const selectedChart = useEditorState({
     editor,
@@ -122,6 +129,16 @@ export default function App() {
           aria-label="Dokumenttitel"
         />
         <span className="status" aria-live="polite">{status}</span>
+        <span
+          className={`desktop-status${desktopConnected ? ' on' : ''}`}
+          title={
+            desktopConnected
+              ? 'Claude Desktop kann in dieses Dokument schreiben'
+              : 'Claude Desktop ist nicht verbunden (Einrichtung: npm run claude-setup)'
+          }
+        >
+          {desktopConnected ? 'Claude Desktop verbunden' : 'Claude Desktop nicht verbunden'}
+        </span>
       </header>
       <Toolbar
         editor={editor}
@@ -130,6 +147,8 @@ export default function App() {
         onSave={handleSave}
         drawing={drawing}
         onToggleDraw={() => setDrawing((d) => !d)}
+        chatOpen={chatOpen}
+        onToggleChat={() => setChatOpen((c) => !c)}
       />
       <div className="body">
       <main className="workspace">
@@ -140,6 +159,7 @@ export default function App() {
         {drawing && <div className="hint">Feld mit gedrückter linker Maustaste aufziehen · Esc zum Abbrechen</div>}
       </main>
       {selectedChart && <ChartPanel editor={editor} pos={selectedChart.pos} attrs={selectedChart.attrs} />}
+      {chatOpen && <ChatPanel editor={editor} onClose={() => setChatOpen(false)} />}
       </div>
       <input ref={fileInput} type="file" accept=".json,.lrh.json" hidden onChange={handleFile} />
     </div>
