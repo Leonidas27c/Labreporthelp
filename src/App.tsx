@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { EditorContent, useEditor } from '@tiptap/react'
+import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
+import { NodeSelection } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
 import TextAlign from '@tiptap/extension-text-align'
 import { Toolbar } from './components/Toolbar'
 import { DrawLayer } from './components/DrawLayer'
+import { ChartPanel } from './components/ChartPanel'
 import { ChartNode } from './extensions/ChartNode'
 import { TablePlaceholderNode } from './extensions/TablePlaceholderNode'
 import {
@@ -97,6 +99,16 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [handleSave, handleOpen])
 
+  // Ist gerade ein Diagramm ausgewählt? Dann die Seitenleiste zeigen.
+  const selectedChart = useEditorState({
+    editor,
+    selector: ({ editor: e }) => {
+      const sel = e?.state.selection
+      if (!(sel instanceof NodeSelection) || sel.node.type.name !== 'chart') return null
+      return { pos: sel.from, attrs: sel.node.attrs }
+    },
+  })
+
   if (!editor) return null
 
   return (
@@ -119,6 +131,7 @@ export default function App() {
         drawing={drawing}
         onToggleDraw={() => setDrawing((d) => !d)}
       />
+      <div className="body">
       <main className="workspace">
         <div className={`page-wrap${drawing ? ' drawing' : ''}`}>
           <EditorContent editor={editor} />
@@ -126,6 +139,8 @@ export default function App() {
         </div>
         {drawing && <div className="hint">Feld mit gedrückter linker Maustaste aufziehen · Esc zum Abbrechen</div>}
       </main>
+      {selectedChart && <ChartPanel editor={editor} pos={selectedChart.pos} attrs={selectedChart.attrs} />}
+      </div>
       <input ref={fileInput} type="file" accept=".json,.lrh.json" hidden onChange={handleFile} />
     </div>
   )

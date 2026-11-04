@@ -18,8 +18,18 @@ Ein Schreibprogramm für Laborprotokolle und wissenschaftliche Arbeiten: wie Wor
 - Am Griff unten rechts lässt sich das Feld größer ziehen, das Raster wächst mit
 - „Tabelle“ ist vorerst ein Platzhalter
 
+**Schritt 3 – Diagramm formatieren** (fertig)
+- Diagramm anklicken → rechts öffnet sich „Diagramm formatieren“ (wie in Word)
+- Achsen: 2 (x, y) oder 3 (zusätzliche y-Achse rechts)
+- Pro Achse: Beschriftung, Einheit, Startwert und Abschnitte
+  - feste Schrittweite (z. B. 10 → 0, 10, 20, 30 …) oder
+  - automatisch bis zu einem Endwert (das Programm wählt eine runde Schrittweite)
+- Hintergrund kariert, punktiert oder blanko, Kästchengröße einstellbar
+- Dicke Linie und Zahl alle N Kästchen (Standard: alle 5)
+- Breite und Höhe als Zahl eingeben, Diagramm löschen
+- Diagramm mit der Maus verschieben: seitlich und an eine andere Stelle im Text
+
 **Als Nächstes**
-3. Diagramm-Einstellungen: Achsen (Anzahl, Beschriftung, Einheit), Hintergrund (kariert, punktiert, blanko)
 4. Desktop-App für PC und Laptop
 
 ## Starten (für Einsteiger)
@@ -49,5 +59,7 @@ Ein Schreibprogramm für Laborprotokolle und wissenschaftliche Arbeiten: wie Wor
   - `src/components/Toolbar.tsx` – Werkzeugleiste
   - `src/components/DrawLayer.tsx` – Aufzieh-Werkzeug und Menü
   - `src/components/ChartView.tsx`, `src/extensions/ChartNode.ts` – Diagrammfeld
+  - `src/components/ChartPanel.tsx` – Seitenleiste „Diagramm formatieren“
+  - `src/lib/chartModel.ts` – Einstellungen und Berechnung der Abschnitte
   - `src/components/TablePlaceholderView.tsx`, `src/extensions/TablePlaceholderNode.ts` – Tabellen-Platzhalter
   - `src/lib/documentFile.ts` – Speichern/Öffnen
