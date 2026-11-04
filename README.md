@@ -30,14 +30,28 @@ Ein Schreibprogramm für Laborprotokolle und wissenschaftliche Arbeiten: wie Wor
 - Diagramm mit der Maus verschieben: seitlich und an eine andere Stelle im Text
 - Das Diagramm rastet auf ganze Abschnitte ein und ist ringsum mit einem Rahmen geschlossen (Kästchen bleiben quadratisch)
 
-**Claude im Chat** (neu)
+**Claude Desktop verbinden** (neu, nutzt dein Claude-Abo)
+- Du schreibst in der Claude-Desktop-App, z. B. „Erstelle in Labreporthelp eine
+  Messwerttabelle mit Zeit [s] und Temperatur [°C], 10 Zeilen“, und die Tabelle
+  erscheint an der Cursorposition in deinem Dokument
+- Claude kann Tabellen, Diagrammfelder und Text einfügen und das Dokument lesen
+- Oben rechts zeigt die App „Claude Desktop verbunden“
+- Kein API-Schlüssel nötig, es zählt dein normales Claude-Abo
+
+Einrichtung (einmalig):
+1. [Claude Desktop](https://claude.ai/download) installieren und anmelden
+2. Im Projektordner `npm install` und dann `npm run claude-setup` ausführen.
+   Das zeigt dir genau, was du wo in Claude Desktop einträgst.
+3. Claude Desktop neu starten, `npm run dev` starten, App im Browser öffnen
+
+**Claude-Chat in der App** (optional, mit API-Schlüssel)
 - Button „✦ Claude“ oben rechts öffnet den Chat
 - Claude fügt an der Cursorposition Tabellen, Diagrammfelder und Text ein, z. B.
   „Erstelle eine Messwerttabelle mit Zeit [s] und Temperatur [°C], 10 Zeilen“
 - Claude kann das Dokument lesen, wenn du dich auf vorhandenen Inhalt beziehst
 - Beim ersten Öffnen gibst du deinen Anthropic API-Schlüssel ein
   (<https://console.anthropic.com/settings/keys>). Er bleibt nur in deinem Browser.
-  Jede Anfrage kostet ein paar Cent.
+  Die API wird getrennt vom Claude-Abo nach Verbrauch abgerechnet (ein paar Cent pro Anfrage).
 
 **Tabellen**
 - „Aufziehen“ → „Tabelle“ fügt jetzt eine echte Tabelle mit Kopfzeile ein (Größe passend zum Feld)
@@ -79,3 +93,5 @@ Ein Schreibprogramm für Laborprotokolle und wissenschaftliche Arbeiten: wie Wor
   - `src/components/ChatPanel.tsx` – Chat mit Claude
   - `src/lib/claude.ts` – Anfrage an Claude und Werkzeuge
   - `src/lib/documentTools.ts` – was Claude im Dokument tun kann
+  - `mcp/server.mjs` – MCP-Server für Claude Desktop
+  - `src/lib/desktopBridge.ts` – Verbindung der App zum MCP-Server

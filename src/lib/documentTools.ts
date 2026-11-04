@@ -29,6 +29,23 @@ export class DocumentTools {
     this.pos = pos + (this.editor.state.doc.content.size - before)
   }
 
+  /** Führt ein Werkzeug anhand seines Namens aus (für Claude-Chat und Claude Desktop). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  run(name: string, input: any): string {
+    switch (name) {
+      case 'get_document':
+        return this.getDocument()
+      case 'insert_table':
+        return this.insertTable(input)
+      case 'insert_chart':
+        return this.insertChart(input)
+      case 'insert_text':
+        return this.insertText(input)
+      default:
+        throw new Error(`Unbekanntes Werkzeug: ${name}`)
+    }
+  }
+
   getDocument(): string {
     const lines: string[] = []
     this.editor.state.doc.forEach((node) => {

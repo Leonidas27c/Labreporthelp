@@ -8,6 +8,7 @@ import { Toolbar } from './components/Toolbar'
 import { DrawLayer } from './components/DrawLayer'
 import { ChartPanel } from './components/ChartPanel'
 import { ChatPanel } from './components/ChatPanel'
+import { useDesktopBridge } from './lib/desktopBridge'
 import { ChartNode } from './extensions/ChartNode'
 import { TablePlaceholderNode } from './extensions/TablePlaceholderNode'
 import {
@@ -103,6 +104,8 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [handleSave, handleOpen])
 
+  const desktopConnected = useDesktopBridge(editor)
+
   // Ist gerade ein Diagramm ausgewählt? Dann die Seitenleiste zeigen.
   const selectedChart = useEditorState({
     editor,
@@ -126,6 +129,16 @@ export default function App() {
           aria-label="Dokumenttitel"
         />
         <span className="status" aria-live="polite">{status}</span>
+        <span
+          className={`desktop-status${desktopConnected ? ' on' : ''}`}
+          title={
+            desktopConnected
+              ? 'Claude Desktop kann in dieses Dokument schreiben'
+              : 'Claude Desktop ist nicht verbunden (Einrichtung: npm run claude-setup)'
+          }
+        >
+          {desktopConnected ? 'Claude Desktop verbunden' : 'Claude Desktop nicht verbunden'}
+        </span>
       </header>
       <Toolbar
         editor={editor}

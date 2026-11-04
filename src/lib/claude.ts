@@ -95,22 +95,6 @@ export type ChatEvent =
   | { type: 'text'; text: string }
   | { type: 'action'; label: string; ok: boolean }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function runTool(tools: DocumentTools, name: string, input: any): string {
-  switch (name) {
-    case 'get_document':
-      return tools.getDocument()
-    case 'insert_table':
-      return tools.insertTable(input)
-    case 'insert_chart':
-      return tools.insertChart(input)
-    case 'insert_text':
-      return tools.insertText(input)
-    default:
-      throw new Error(`Unbekanntes Werkzeug: ${name}`)
-  }
-}
-
 /**
  * Schickt die Unterhaltung an Claude und führt die Werkzeugaufrufe aus,
  * bis Claude fertig ist. `history` wird dabei fortgeschrieben.
@@ -157,7 +141,7 @@ export async function runChat(
     for (const block of response.content) {
       if (block.type !== 'tool_use') continue
       try {
-        const out = runTool(tools, block.name, block.input)
+        const out = tools.run(block.name, block.input)
         results.push({ type: 'tool_result', tool_use_id: block.id, content: out })
         if (block.name !== 'get_document') onEvent({ type: 'action', label: ACTION_LABELS[block.name] ?? block.name, ok: true })
       } catch (err) {
