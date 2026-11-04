@@ -119,10 +119,43 @@ const NOT_INSTALLED =
   'Claude Code ist auf diesem Rechner nicht installiert. Einmalig installieren (siehe README, Abschnitt „Chat über das Abo“), ' +
   'dann im Terminal `claude` starten und mit deinem Claude-Konto anmelden. Danach `npm run dev` neu starten.'
 
+const NOT_LOGGED_IN = 'Du bist bei Claude noch nicht angemeldet. Klicke auf „Bei Claude anmelden“.'
+const LOGIN_HINT = /not logged in|\/login|log ?in|authenticat|oauth|credential|anmeld/i
+
 async function status(res) {
   const r = await runClaude(['--version'], '', tmpdir())
   if (r.notFound || r.code !== 0) return send(res, 200, { installed: false, message: NOT_INSTALLED })
-  send(res, 200, { installed: true, version: r.stdout.trim() })
+  let loggedIn = null
+  const a = await runClaude(['auth', 'status', '--json'], '', tmpdir())
+  try {
+    loggedIn = Boolean(JSON.parse(a.stdout).loggedIn)
+  } catch {
+    /* ältere Version ohne "auth status": unbekannt lassen */
+  }
+  send(res, 200, { installed: true, version: r.stdout.trim(), loggedIn })
+}
+
+/** Öffnet ein sichtbares Fenster mit der Claude-Anmeldung (der Browser geht dann von selbst auf). */
+function login(res) {
+  try {
+    if (process.platform === 'win32') {
+      spawn('start "Bei Claude anmelden" cmd /k "echo Gleich oeffnet sich der Browser. Melde dich dort mit deinem Claude-Konto an. && claude auth login && echo. && echo Fertig! Du kannst dieses Fenster schliessen."', {
+        shell: true,
+        detached: true,
+        stdio: 'ignore',
+      }).unref()
+    } else if (process.platform === 'darwin') {
+      spawn('osascript', ['-e', 'tell application "Terminal" to do script "claude auth login"', '-e', 'tell application "Terminal" to activate'], {
+        detached: true,
+        stdio: 'ignore',
+      }).unref()
+    } else {
+      return send(res, 200, { ok: false, error: 'Bitte im Terminal `claude auth login` eingeben und dich anmelden.' })
+    }
+    send(res, 200, { ok: true })
+  } catch (e) {
+    send(res, 200, { ok: false, error: `Das Anmeldefenster konnte nicht geöffnet werden (${e}).` })
+  }
 }
 
 /** Dateien aus dem Browser in den Arbeitsordner schreiben, damit Claude sie mit Read lesen kann. */
@@ -180,14 +213,14 @@ async function chat(req, res) {
     out = JSON.parse(r.stdout)
   } catch {
     const detail = (r.stderr || r.stdout).trim().slice(0, 500)
-    const login = /log ?in|auth|anmeld/i.test(detail)
-    return send(res, 200, {
-      error: login
-        ? 'Claude Code ist nicht angemeldet. Bitte im Terminal einmal `claude` starten und mit deinem Claude-Konto anmelden.'
-        : `Claude Code hat nicht geantwortet.${detail ? ` (${detail})` : ''}`,
-    })
+    if (LOGIN_HINT.test(detail)) return send(res, 200, { error: NOT_LOGGED_IN, needsLogin: true })
+    return send(res, 200, { error: `Claude Code hat nicht geantwortet.${detail ? ` (${detail})` : ''}` })
   }
-  if (out.is_error) return send(res, 200, { error: String(out.result || 'Claude Code meldet einen Fehler.'), sessionId: out.session_id })
+  if (out.is_error) {
+    const msg = String(out.result || 'Claude Code meldet einen Fehler.')
+    if (LOGIN_HINT.test(msg)) return send(res, 200, { error: NOT_LOGGED_IN, needsLogin: true })
+    return send(res, 200, { error: msg, sessionId: out.session_id })
+  }
   const so = out.structured_output
   if (so && typeof so === 'object') {
     return send(res, 200, { text: String(so.reply ?? ''), actions: Array.isArray(so.actions) ? so.actions : [], sessionId: out.session_id })
@@ -199,10 +232,15 @@ export function middleware(req, res, next) {
   const url = req.url?.split('?')[0]
   // Nur Anfragen von dieser Seite selbst annehmen (Schutz vor fremden Webseiten)
   const origin = req.headers.origin
-  if ((url === '/api/abo/chat' || url === '/api/abo/status') && origin && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+  if (url?.startsWith('/api/abo/') && origin && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
     return send(res, 403, { error: 'Nicht erlaubt.' })
   }
   if (url === '/api/abo/status' && req.method === 'GET') return void status(res).catch((e) => send(res, 500, { error: String(e) }))
+  if (url === '/api/abo/login' && req.method === 'POST') {
+    // Nur von der eigenen Seite: ohne Origin-Kopf (z. B. direkter Aufruf) wird nichts geöffnet
+    if (!origin) return send(res, 403, { error: 'Nicht erlaubt.' })
+    return login(res)
+  }
   if (url === '/api/abo/chat' && req.method === 'POST') return void chat(req, res).catch((e) => send(res, 500, { error: String(e) }))
   next()
 }
