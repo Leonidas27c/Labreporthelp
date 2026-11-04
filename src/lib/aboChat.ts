@@ -96,7 +96,10 @@ export async function runAboChat(opts: {
   const data = await r.json().catch(() => ({ error: `Fehler ${r.status}` }))
   if (data.error) throw new Error(data.error)
 
-  const reply = parseReply(String(data.text ?? ''))
+  // Normalfall: festes Format mit Text und Aktionen. Sonst den Text nach einem Aktionsblock durchsuchen.
+  const reply = Array.isArray(data.actions)
+    ? { text: String(data.text ?? '').trim(), actions: data.actions as { tool: string; input: unknown }[], broken: false }
+    : parseReply(String(data.text ?? ''))
   if (reply.text) onEvent({ type: 'text', text: reply.text })
   for (const a of reply.actions) {
     const label = ACTION_LABELS[a.tool] ?? a.tool
