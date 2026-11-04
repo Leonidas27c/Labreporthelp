@@ -14,6 +14,12 @@ type Entry =
   | { kind: 'action'; text: string; ok: boolean }
   | { kind: 'error'; text: string }
 
+const DESKTOP_EXAMPLES = [
+  'Erstelle in Labreporthelp auf Basis der angehängten Versuchsanleitung alle erforderlichen Tabellen und Diagramme.',
+  'Erstelle in Labreporthelp eine Messwerttabelle mit Zeit [s] und Temperatur [°C], 10 Zeilen.',
+  'Lege in Labreporthelp die Gliederung für ein Versuchsprotokoll an.',
+]
+
 const EXAMPLES = [
   'Erstelle eine Messwerttabelle mit Zeit [s] und Temperatur [°C], 10 Zeilen',
   'Füge ein Diagramm ein: Spannung U [V] von 0 bis 12, Strom I [mA] von 0 bis 50',
@@ -38,9 +44,18 @@ function loadKey() {
 }
 
 /** Chat mit Claude in der Seitenleiste. Claude kann Tabellen, Diagramme und Text einfügen. */
-export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => void }) {
+export function ChatPanel({
+  editor,
+  onClose,
+  desktopConnected,
+}: {
+  editor: Editor
+  onClose: () => void
+  desktopConnected: boolean
+}) {
   const [apiKey, setApiKey] = useState(loadKey)
-  const [showSettings, setShowSettings] = useState(() => !loadKey())
+  const [showSettings, setShowSettings] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
   const [entries, setEntries] = useState<Entry[]>([])
   const [input, setInput] = useState('')
   const [model, setModel] = useState<ModelId>(loadModel)
@@ -136,6 +151,54 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
     setEntries([])
   }
 
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(text)
+      window.setTimeout(() => setCopied(null), 1500)
+    } catch {
+      /* Zwischenablage nicht erlaubt */
+    }
+  }
+
+  // Ohne API-Schlüssel: Anleitung für Claude Desktop (läuft über das Claude-Abo)
+  if (!apiKey && !showSettings) {
+    return (
+      <aside className="side-panel chat-panel" aria-label="Claude">
+        <div className="chat-head">
+          <h2>✦ Claude</h2>
+          <div className="chat-head-actions">
+            <button title="Schließen" onClick={onClose}>✕</button>
+          </div>
+        </div>
+        <section className="abo-guide">
+          <p className={`abo-status${desktopConnected ? ' on' : ''}`}>
+            {desktopConnected ? 'Claude Desktop ist verbunden.' : 'Claude Desktop ist noch nicht verbunden.'}
+          </p>
+          <h3>So arbeitest du mit deinem Claude-Abo</h3>
+          <ol>
+            <li>Klick im Dokument an die Stelle, an der etwas eingefügt werden soll.</li>
+            <li>Öffne <strong>Claude Desktop</strong> und starte einen neuen Chat. Dort kannst du das Modell wählen und Dateien wie deine Versuchsanleitung anhängen.</li>
+            <li>Schreib, was du brauchst, und erwähne „Labreporthelp“. Erlaube das Werkzeug, wenn Claude fragt.</li>
+            <li>Tabellen, Diagramme und Text erscheinen hier im Dokument.</li>
+          </ol>
+          <h3>Beispiele zum Kopieren</h3>
+          {DESKTOP_EXAMPLES.map((ex) => (
+            <button key={ex} className="example" onClick={() => copy(ex)} title="In die Zwischenablage kopieren">
+              {copied === ex ? '✓ Kopiert' : ex}
+            </button>
+          ))}
+          {!desktopConnected && (
+            <p className="help">Einrichtung: im Projektordner <code>npm run claude-setup</code> ausführen und den Anweisungen folgen.</p>
+          )}
+          <button className="link-btn" onClick={() => setShowSettings(true)}>
+            Stattdessen hier in der App chatten (mit API-Schlüssel, kostet extra)
+          </button>
+        </section>
+      </aside>
+    )
+  }
+
   return (
     <aside className="side-panel chat-panel" aria-label="Claude">
       <div className="chat-head">
@@ -173,7 +236,11 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
             <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">console.anthropic.com</a>.
             Er wird nur in diesem Browser gespeichert und direkt an Anthropic geschickt. Die API wird getrennt vom Claude-Abo nach Verbrauch abgerechnet.
           </p>
-          {apiKey && <button className="primary" onClick={() => setShowSettings(false)}>Fertig</button>}
+          {apiKey ? (
+            <button className="primary" onClick={() => setShowSettings(false)}>Fertig</button>
+          ) : (
+            <button className="link-btn" onClick={() => setShowSettings(false)}>← Zurück zur Anleitung für Claude Desktop</button>
+          )}
         </section>
       )}
 

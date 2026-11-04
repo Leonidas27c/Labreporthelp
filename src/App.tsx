@@ -159,7 +159,7 @@ export default function App() {
         {drawing && <div className="hint">Feld mit gedrückter linker Maustaste aufziehen · Esc zum Abbrechen</div>}
       </main>
       {selectedChart && <ChartPanel editor={editor} pos={selectedChart.pos} attrs={selectedChart.attrs} />}
-      {chatOpen && <ChatPanel editor={editor} onClose={() => setChatOpen(false)} />}
+      {chatOpen && <ChatPanel editor={editor} onClose={() => setChatOpen(false)} desktopConnected={desktopConnected} />}
       </div>
       <input ref={fileInput} type="file" accept=".json,.lrh.json" hidden onChange={handleFile} />
     </div>

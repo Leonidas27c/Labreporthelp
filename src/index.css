@@ -224,3 +224,17 @@ html, body, #root { margin: 0; height: 100%; }
 }
 .attach-btn:hover:not(:disabled) { border-color: #d97757; }
 .msg-files { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+
+/* Anleitung Claude Desktop im Chat-Bereich */
+.abo-guide { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }
+.abo-guide h3 { margin: 10px 0 2px; }
+.abo-guide ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; line-height: 1.45; }
+.abo-status { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--bg); color: var(--muted); }
+.abo-status.on { background: #eaf7ef; color: #1e7a46; }
+.abo-guide .example {
+  display: block; width: 100%; text-align: left; font: inherit; font-size: 12.5px;
+  padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); cursor: pointer;
+}
+.abo-guide .example:hover { border-color: #d97757; background: #fdf6f2; }
+.abo-guide code { background: var(--bg); padding: 1px 4px; border-radius: 4px; }
+.link-btn { font: inherit; font-size: 12px; border: 0; background: transparent; color: var(--muted); text-decoration: underline; cursor: pointer; text-align: left; padding: 4px 0; margin-top: 8px; }
