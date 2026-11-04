@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
 import { DocumentTools } from '../lib/documentTools'
-import { DEFAULT_MODEL, MODELS, aboStatus, runAboChat, type AboStatus, type ModelId } from '../lib/aboChat'
+import { DEFAULT_MODEL, MODELS, NeedsLoginError, aboLogin, aboStatus, runAboChat, type AboStatus, type ModelId } from '../lib/aboChat'
 import { ACCEPT, readAttachment, type Attachment } from '../lib/attachments'
 
 const MODEL_STORAGE = 'labreporthelp:model'
@@ -42,6 +42,9 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
   const [reading, setReading] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
+  // Anmeldung: null = kein Hinweis, 'needed' = Knopf zeigen, 'waiting' = Fenster ist offen, wir warten
+  const [login, setLogin] = useState<null | 'needed' | 'waiting'>(null)
+  const [loginError, setLoginError] = useState<string | null>(null)
   const sessionId = useRef<string | null>(null)
   const tools = useMemo(() => new DocumentTools(editor), [editor])
   const listEnd = useRef<HTMLDivElement>(null)
@@ -51,8 +54,36 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
   }, [entries, busy])
 
   useEffect(() => {
-    aboStatus().then(setStatus)
+    aboStatus().then((st) => {
+      setStatus(st)
+      if (st.installed && st.loggedIn === false) setLogin('needed')
+    })
   }, [])
+
+  // Während das Anmeldefenster offen ist, regelmäßig nachsehen, ob die Anmeldung geklappt hat
+  useEffect(() => {
+    if (login !== 'waiting') return
+    let tries = 0
+    const timer = setInterval(() => {
+      tries++
+      const giveUp = tries > 100
+      aboStatus().then((st) => {
+        if (st.installed && st.loggedIn) {
+          setStatus(st)
+          setLogin(null)
+          setEntries((e) => [...e, { kind: 'action', text: 'Bei Claude angemeldet. Du kannst jetzt schreiben.', ok: true }])
+        } else if (giveUp) setLogin('needed')
+      })
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [login])
+
+  const startLogin = async () => {
+    setLoginError(null)
+    const err = await aboLogin()
+    if (err) setLoginError(err)
+    else setLogin('waiting')
+  }
 
   const saveModel = (m: ModelId) => {
     setModel(m)
@@ -100,6 +131,7 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
     } catch (err) {
       setFiles((cur) => (cur.length ? cur : attached))
       setEntries((e) => [...e, { kind: 'error', text: err instanceof Error ? err.message : String(err) }])
+      if (err instanceof NeedsLoginError) setLogin((l) => l ?? 'needed')
       aboStatus().then(setStatus)
     } finally {
       setBusy(false)
@@ -134,6 +166,25 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
         <section className="chat-settings">
           <p className="help">{status.message}</p>
           <button onClick={() => aboStatus().then(setStatus)}>Erneut prüfen</button>
+        </section>
+      )}
+
+      {login && (
+        <section className="chat-settings chat-login">
+          {login === 'needed' ? (
+            <>
+              <p className="help">Für den Chat musst du dich einmal mit deinem Claude-Konto (Pro oder Max) anmelden.</p>
+              <button className="primary" onClick={startLogin}>Bei Claude anmelden</button>
+            </>
+          ) : (
+            <>
+              <p className="help">
+                Es hat sich ein Fenster geöffnet, gleich auch der Browser. Melde dich dort an. Sobald es geklappt hat, geht es hier von selbst weiter.
+              </p>
+              <button onClick={startLogin}>Fenster noch einmal öffnen</button>
+            </>
+          )}
+          {loginError && <p className="help">{loginError}</p>}
         </section>
       )}
 

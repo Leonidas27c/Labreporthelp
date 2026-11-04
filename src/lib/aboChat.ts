@@ -20,7 +20,21 @@ export type ChatEvent =
   | { type: 'text'; text: string }
   | { type: 'action'; label: string; ok: boolean }
 
-export type AboStatus = { installed: true; version: string } | { installed: false; message: string }
+export type AboStatus = { installed: true; version: string; loggedIn: boolean | null } | { installed: false; message: string }
+
+/** Fehler, bei dem die Person sich erst bei Claude anmelden muss. */
+export class NeedsLoginError extends Error {}
+
+/** Öffnet auf diesem Rechner ein Fenster für die Anmeldung bei Claude. */
+export async function aboLogin(): Promise<string | null> {
+  try {
+    const r = await fetch('/api/abo/login', { method: 'POST' })
+    const data = await r.json()
+    return data.ok ? null : String(data.error ?? 'Das Anmeldefenster konnte nicht geöffnet werden.')
+  } catch {
+    return 'Der lokale Server antwortet nicht.'
+  }
+}
 
 /** Prüft, ob Claude Code auf diesem Rechner läuft (über den lokalen Vite-Server). */
 export async function aboStatus(): Promise<AboStatus> {
@@ -94,7 +108,7 @@ export async function runAboChat(opts: {
     throw new Error('Der lokale Server antwortet nicht. Läuft `npm run dev` noch?')
   })
   const data = await r.json().catch(() => ({ error: `Fehler ${r.status}` }))
-  if (data.error) throw new Error(data.error)
+  if (data.error) throw data.needsLogin ? new NeedsLoginError(data.error) : new Error(data.error)
 
   // Normalfall: festes Format mit Text und Aktionen. Sonst den Text nach einem Aktionsblock durchsuchen.
   const reply = Array.isArray(data.actions)
