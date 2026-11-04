@@ -38,7 +38,11 @@ Ein Schreibprogramm für Laborprotokolle und wissenschaftliche Arbeiten: wie Wor
 - Oben rechts zeigt die App „Claude Desktop verbunden“
 - Kein API-Schlüssel nötig, es zählt dein normales Claude-Abo
 
-Einrichtung (einmalig):
+Geht auch mit dem **kostenlosen Claude-Konto** (der Chat in der App braucht dagegen Pro oder Max).
+Am einfachsten: im Chat-Fenster (✦ Claude) auf „Stattdessen Claude Desktop benutzen“ → „Mit Claude Desktop verbinden“
+klicken, dann Claude Desktop neu starten. Im Release-Paket geht es auch mit „Claude Desktop verbinden.bat“.
+
+Einrichtung von Hand:
 1. [Claude Desktop](https://claude.ai/download) installieren und anmelden
 2. Im Projektordner `npm install` und dann `npm run claude-setup` ausführen.
    Das zeigt dir genau, was du wo in Claude Desktop einträgst.

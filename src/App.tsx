@@ -163,7 +163,7 @@ export default function App() {
           title={
             desktopConnected
               ? 'Claude Desktop kann in dieses Dokument schreiben'
-              : 'Claude Desktop ist nicht verbunden (Einrichtung: npm run claude-setup)'
+              : 'Claude Desktop ist nicht verbunden. Einrichtung: im Chat (✦ Claude) „Stattdessen Claude Desktop benutzen“'
           }
         >
           {desktopConnected ? 'Claude Desktop verbunden' : 'Claude Desktop nicht verbunden'}

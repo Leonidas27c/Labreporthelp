@@ -24,6 +24,25 @@ export type AboStatus = { installed: true; version: string; loggedIn: boolean | 
 
 /** Fehler, bei dem die Person sich erst bei Claude anmelden muss. */
 export class NeedsLoginError extends Error {}
+/** Fehler, bei dem das Konto kein Claude Code hat (z. B. kostenloses Konto). */
+export class NeedsDesktopError extends Error {}
+
+/** Trägt Labreporthelp in Claude Desktop ein. Liefert eine Meldung für die Person. */
+export async function connectDesktop(): Promise<{ ok: boolean; text: string }> {
+  try {
+    const r = await fetch('/api/desktop/connect', { method: 'POST' })
+    const data = await r.json()
+    if (data.ok) {
+      return {
+        ok: true,
+        text: 'Eingetragen. Jetzt Claude Desktop ganz beenden (auch unten rechts neben der Uhr: Rechtsklick auf das Claude-Symbol, „Beenden“) und neu öffnen. Dann steht oben „Claude Desktop verbunden“.',
+      }
+    }
+    return { ok: false, text: (data.messages ?? []).join(' ') || data.error || 'Das hat nicht geklappt.' }
+  } catch {
+    return { ok: false, text: 'Der lokale Server antwortet nicht.' }
+  }
+}
 
 /** Öffnet auf diesem Rechner ein Fenster für die Anmeldung bei Claude. */
 export async function aboLogin(): Promise<string | null> {
@@ -108,7 +127,7 @@ export async function runAboChat(opts: {
     throw new Error('Der lokale Server antwortet nicht. Läuft `npm run dev` noch?')
   })
   const data = await r.json().catch(() => ({ error: `Fehler ${r.status}` }))
-  if (data.error) throw data.needsLogin ? new NeedsLoginError(data.error) : new Error(data.error)
+  if (data.error) throw data.needsLogin ? new NeedsLoginError(data.error) : data.needsDesktop ? new NeedsDesktopError(data.error) : new Error(data.error)
 
   // Normalfall: festes Format mit Text und Aktionen. Sonst den Text nach einem Aktionsblock durchsuchen.
   const reply = Array.isArray(data.actions)
