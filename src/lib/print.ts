@@ -17,6 +17,11 @@ export function printDocument(source: HTMLElement, title: string) {
   content.removeAttribute('contenteditable')
   content.classList.remove('ProseMirror-focused')
   content.querySelectorAll('.ProseMirror-selectednode').forEach((el) => el.classList.remove('ProseMirror-selectednode'))
+  // Tabellen, die länger als eine Seite sind, dürfen beim Drucken umbrechen
+  const tables = source.querySelectorAll<HTMLElement>('.lab-table')
+  content.querySelectorAll<HTMLElement>('.lab-table').forEach((el, i) => {
+    if ((tables[i]?.offsetHeight ?? 0) > USABLE_MM * MM * 0.95) el.setAttribute('data-long', '')
+  })
   root.innerHTML = `<table class="print-frame"><thead><tr><td><div class="print-top"></div></td></tr></thead>
 <tfoot><tr><td><div class="print-bottom"></div></td></tr></tfoot><tbody><tr><td class="print-body"></td></tr></tbody></table>`
   root.querySelector('.print-body')!.appendChild(content)

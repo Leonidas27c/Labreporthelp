@@ -137,7 +137,7 @@ export async function runAboChat(opts: {
   for (const a of reply.actions) {
     const label = ACTION_LABELS[a.tool] ?? a.tool
     try {
-      tools.run(a.tool, a.input)
+      await tools.run(a.tool, a.input)
       onEvent({ type: 'action', label, ok: true })
     } catch {
       onEvent({ type: 'action', label: `${label} fehlgeschlagen`, ok: false })
