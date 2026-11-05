@@ -10,7 +10,7 @@ type Entry =
   | { kind: 'user'; text: string; files?: string[] }
   | { kind: 'assistant'; text: string }
   | { kind: 'action'; text: string; ok: boolean }
-  | { kind: 'error'; text: string }
+  | { kind: 'error'; text: string; login?: boolean }
 
 const EXAMPLES = [
   'Erstelle eine Messwerttabelle mit Zeit [s] und Temperatur [°C], 10 Zeilen',
@@ -118,6 +118,9 @@ export function ChatPanel({ editor, desktopConnected, onClose }: { editor: Edito
   const codeReady = !!status && status.installed && status.loggedIn !== false && !codeFailed
   const desktopMode = desktopConnected && !!status && !codeReady
 
+  // Im Desktop-Modus sind alte Anmelde-Fehler überholt und werden nicht angezeigt
+  const shown = desktopMode ? entries.filter((x) => !(x.kind === 'error' && x.login)) : entries
+
   /** Claude-Desktop-Modus: Nachricht in die Zwischenablage, eingefügt wird sie in Claude Desktop. */
   const sendViaDesktop = async (msg: string) => {
     const text = `In Labreporthelp: ${msg}`
@@ -161,8 +164,9 @@ export function ChatPanel({ editor, desktopConnected, onClose }: { editor: Edito
       })
     } catch (err) {
       setFiles((cur) => (cur.length ? cur : attached))
-      setEntries((e) => [...e, { kind: 'error', text: err instanceof Error ? err.message : String(err) }])
-      if (err instanceof NeedsLoginError || err instanceof NeedsDesktopError) setCodeFailed(true)
+      const login = err instanceof NeedsLoginError || err instanceof NeedsDesktopError
+      setEntries((e) => [...e, { kind: 'error', text: err instanceof Error ? err.message : String(err), login }])
+      if (login) setCodeFailed(true)
       if (err instanceof NeedsLoginError) setLogin((l) => l ?? 'needed')
       if (err instanceof NeedsDesktopError) {
         setLogin(null)
@@ -283,7 +287,7 @@ export function ChatPanel({ editor, desktopConnected, onClose }: { editor: Edito
       )}
 
       <div className="chat-list">
-        {entries.length === 0 && (
+        {shown.length === 0 && (
           <div className="chat-empty">
             <p>Sag mir, was ins Dokument soll. Ich füge es an der Cursorposition ein.</p>
             {EXAMPLES.map((ex) => (
@@ -291,7 +295,7 @@ export function ChatPanel({ editor, desktopConnected, onClose }: { editor: Edito
             ))}
           </div>
         )}
-        {entries.map((e, i) => (
+        {shown.map((e, i) => (
           <div key={i} className={`chat-msg ${e.kind}${e.kind === 'action' && !e.ok ? ' failed' : ''}`}>
             {e.kind === 'user' && e.files?.length ? (
               <span className="msg-files">{e.files.map((f) => `📎 ${f}`).join('\n')}</span>
