@@ -17,7 +17,7 @@ npm run build
 mkdir -p "$PKG/node" "$PKG/server" "$PKG/scripts" "$PKG/mcp"
 cp -r dist "$PKG/app"
 cp server/aboChat.mjs server/standalone.mjs server/desktopConfig.mjs "$PKG/server/"
-cp release/scripts/einrichten.ps1 release/scripts/claude-desktop.mjs "$PKG/scripts/"
+cp release/scripts/einrichten.ps1 release/scripts/claude-desktop.mjs release/scripts/update.mjs release/scripts/update-installieren.bat "$PKG/scripts/"
 # MCP-Server für Claude Desktop mit allen Bausteinen in eine Datei packen
 npx rolldown mcp/server.mjs --platform node --format esm --minify --file "$PKG/mcp/server.mjs"
 cp "release/Labreporthelp starten.bat" "release/Einrichtung wiederholen.bat" "release/Claude Desktop verbinden.bat" release/LIESMICH.txt "$PKG/"
@@ -30,10 +30,15 @@ curl -fsSL "https://nodejs.org/dist/$NODE_VERSION/SHASUMS256.txt" | grep " $NODE
 unzip -q -j "$WORK/$NODE_ZIP" "node-$NODE_VERSION-win-x64/node.exe" "node-$NODE_VERSION-win-x64/LICENSE" -d "$PKG/node"
 
 # Windows-Zeilenenden für Skripte und Textdateien
-for f in "$PKG"/*.bat "$PKG"/LIESMICH.txt "$PKG"/scripts/*.ps1; do
+for f in "$PKG"/*.bat "$PKG"/LIESMICH.txt "$PKG"/scripts/*.ps1 "$PKG"/scripts/*.bat; do
   sed -i 's/\r$//; s/$/\r/' "$f"
 done
-git rev-parse --short HEAD > "$PKG/VERSION.txt" 2>/dev/null || true
+# Versionsnummer (z. B. v0.2.0) für die Update-Prüfung beim Start; ohne Release nur die Commit-Kennung
+if [ -n "${RELEASE_VERSION:-}" ]; then
+  echo "$RELEASE_VERSION" > "$PKG/VERSION.txt"
+else
+  git rev-parse --short HEAD > "$PKG/VERSION.txt" 2>/dev/null || true
+fi
 
 mkdir -p "$OUT"
 OUT_ABS="$(cd "$OUT" && pwd)"
