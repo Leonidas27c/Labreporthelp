@@ -33,7 +33,7 @@ function withBold(text: string) {
 }
 
 /** Chat mit Claude in der Seitenleiste, über Claude Code und das Claude-Abo. Claude kann Tabellen, Diagramme und Text einfügen. */
-export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => void }) {
+export function ChatPanel({ editor, desktopConnected, onClose }: { editor: Editor; desktopConnected: boolean; onClose: () => void }) {
   const [status, setStatus] = useState<AboStatus | null>(null)
   const [entries, setEntries] = useState<Entry[]>([])
   const [input, setInput] = useState('')
@@ -49,6 +49,8 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
   const [desktopMsg, setDesktopMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [snippet, setSnippet] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  // Claude Code hat schon einmal mit "nicht angemeldet" oder "kein Zugriff" geantwortet
+  const [codeFailed, setCodeFailed] = useState(false)
   const sessionId = useRef<string | null>(null)
   const tools = useMemo(() => new DocumentTools(editor), [editor])
   const listEnd = useRef<HTMLDivElement>(null)
@@ -74,6 +76,7 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
       aboStatus().then((st) => {
         if (st.installed && st.loggedIn) {
           setStatus(st)
+          setCodeFailed(false)
           setLogin(null)
           setEntries((e) => [...e, { kind: 'action', text: 'Bei Claude angemeldet. Du kannst jetzt schreiben.', ok: true }])
         } else if (giveUp) setLogin('needed')
@@ -111,7 +114,31 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
     setReading(false)
   }
 
+  // Modus automatisch wählen: Claude Code (Abo), wenn angemeldet; sonst Claude Desktop, wenn verbunden
+  const codeReady = !!status && status.installed && status.loggedIn !== false && !codeFailed
+  const desktopMode = desktopConnected && !!status && !codeReady
+
+  /** Claude-Desktop-Modus: Nachricht in die Zwischenablage, eingefügt wird sie in Claude Desktop. */
+  const sendViaDesktop = async (msg: string) => {
+    const text = `In Labreporthelp: ${msg}`
+    setInput('')
+    setEntries((e) => [...e, { kind: 'user', text: msg }])
+    try {
+      await navigator.clipboard.writeText(text)
+      setEntries((e) => [
+        ...e,
+        { kind: 'action', text: 'Kopiert. Jetzt in Claude Desktop mit Strg+V einfügen und abschicken, das Ergebnis erscheint hier im Dokument.', ok: true },
+      ])
+    } catch {
+      setEntries((e) => [...e, { kind: 'error', text: `Kopieren hat nicht geklappt. Bitte in Claude Desktop schreiben: ${text}` }])
+    }
+  }
+
   const send = async (text: string) => {
+    if (desktopMode) {
+      if (text.trim()) await sendViaDesktop(text.trim())
+      return
+    }
     const msg = text.trim() || (files.length ? 'Lies die angehängte Datei und fasse kurz zusammen, was für das Protokoll wichtig ist.' : '')
     if (!msg || busy || reading) return
     const attached = files
@@ -135,6 +162,7 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
     } catch (err) {
       setFiles((cur) => (cur.length ? cur : attached))
       setEntries((e) => [...e, { kind: 'error', text: err instanceof Error ? err.message : String(err) }])
+      if (err instanceof NeedsLoginError || err instanceof NeedsDesktopError) setCodeFailed(true)
       if (err instanceof NeedsLoginError) setLogin((l) => l ?? 'needed')
       if (err instanceof NeedsDesktopError) {
         setLogin(null)
@@ -161,14 +189,22 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
         </div>
       </div>
 
-      <label className="model-select">
+      <p className="help chat-mode">
+        {desktopMode
+          ? 'Läuft über: Claude Desktop. Schreib hier und klick „Senden“, dann in Claude Desktop einfügen.'
+          : codeReady
+            ? 'Läuft über: Claude Code (dein Claude-Abo).'
+            : 'Kein Claude verbunden. Melde dich an oder verbinde Claude Desktop.'}
+      </p>
+
+      {!desktopMode && <label className="model-select">
         Modell
         <select value={model} onChange={(e) => saveModel(e.target.value as ModelId)} disabled={busy}>
           {MODELS.map((m) => (
             <option key={m.id} value={m.id}>{m.label}</option>
           ))}
         </select>
-      </label>
+      </label>}
 
       {status && !status.installed && (
         <section className="chat-settings">
@@ -177,7 +213,7 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
         </section>
       )}
 
-      {login && (
+      {login && !desktopMode && (
         <section className="chat-settings chat-login">
           {login === 'needed' ? (
             <>
@@ -200,7 +236,7 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
         </section>
       )}
 
-      {showDesktop && (
+      {showDesktop && !desktopMode && (
         <section className="chat-settings chat-login">
           <p className="help">
             <strong>Mit kostenlosem Konto:</strong> Du schreibst in der Claude-Desktop-App, z. B. „Erstelle in Labreporthelp eine Messwerttabelle mit Zeit [s] und Temperatur [°C]“, und es erscheint hier im Dokument.
@@ -249,7 +285,7 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
       <div className="chat-list">
         {entries.length === 0 && (
           <div className="chat-empty">
-            <p>Sag mir, was ins Dokument soll. Ich füge es an der Cursorposition ein. Läuft über dein Claude-Abo.</p>
+            <p>Sag mir, was ins Dokument soll. Ich füge es an der Cursorposition ein.</p>
             {EXAMPLES.map((ex) => (
               <button key={ex} className="example" onClick={() => send(ex)} disabled={busy}>{ex}</button>
             ))}
@@ -303,7 +339,13 @@ export function ChatPanel({ editor, onClose }: { editor: Editor; onClose: () => 
           }}
         />
         <div className="chat-input-row">
-          <button type="button" className="attach-btn" onClick={() => fileInput.current?.click()} disabled={busy} title="PDF, Word, PowerPoint, Bild oder Text anhängen">
+          <button
+            type="button"
+            className="attach-btn"
+            onClick={() => fileInput.current?.click()}
+            disabled={busy || desktopMode}
+            title={desktopMode ? 'Dateien bitte direkt in Claude Desktop anhängen' : 'PDF, Word, PowerPoint, Bild oder Text anhängen'}
+          >
             📎 Datei
           </button>
           <button type="submit" className="primary" disabled={busy || reading || (!input.trim() && !files.length)}>Senden</button>

@@ -191,7 +191,7 @@ export default function App() {
       </main>
       {selectedChart && <ChartPanel editor={editor} pos={selectedChart.pos} attrs={selectedChart.attrs} />}
       {!selectedChart && selectedTable && <TablePanel editor={editor} info={selectedTable} />}
-      {chatOpen && <ChatPanel editor={editor} onClose={() => setChatOpen(false)} />}
+      {chatOpen && <ChatPanel editor={editor} desktopConnected={desktopConnected} onClose={() => setChatOpen(false)} />}
       </div>
       <input ref={fileInput} type="file" accept=".json,.lrh.json" hidden onChange={handleFile} />
     </div>
