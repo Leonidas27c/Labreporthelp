@@ -53,8 +53,13 @@ function startBridge() {
   wss.on('connection', onConnection)
 }
 
+// Mehrere offene Tabs dürfen gleichzeitig verbunden sein. Früher hat jede neue Verbindung die alte
+// geschlossen; zwei Tabs haben sich dann alle paar Sekunden gegenseitig rausgeworfen (Anzeige flackerte).
+// Werkzeugaufrufe gehen an den zuletzt verbundenen Tab.
+const apps = []
+
 function onConnection(socket) {
-  app?.close()
+  apps.push(socket)
   app = socket
   console.error('[labreporthelp] App verbunden')
   socket.on('message', (raw) => {
@@ -71,7 +76,9 @@ function onConnection(socket) {
     msg.error ? p.reject(new Error(msg.error)) : p.resolve(String(msg.result ?? ''))
   })
   socket.on('close', () => {
-    if (app === socket) app = null
+    const i = apps.indexOf(socket)
+    if (i >= 0) apps.splice(i, 1)
+    if (app === socket) app = apps.at(-1) ?? null
     console.error('[labreporthelp] App getrennt')
   })
 }
