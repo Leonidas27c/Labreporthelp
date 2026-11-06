@@ -45,5 +45,8 @@ Deine Dokumente: "Speichern" legt eine Datei zum Weiterbearbeiten an.
 "Drucken / PDF" öffnet den Druckdialog; als Drucker "Microsoft Print to PDF"
 wählen, um ein PDF zu bekommen.
 
-Neue Version: Die neue ZIP-Datei von GitHub (Releases) entpacken und den
-alten Ordner löschen. Deine gespeicherten Dokumente sind davon nicht betroffen.
+Neue Version: Beim Start schaut Labreporthelp auf GitHub nach, ob es eine
+neuere Version gibt, und installiert sie automatisch (kein Konto nötig).
+Ohne Internet startet einfach die bisherige Version. Deine Dokumente und
+die Einrichtung bleiben erhalten. Wer das nicht möchte, legt im Ordner
+eine leere Datei ".keine-updates" an.

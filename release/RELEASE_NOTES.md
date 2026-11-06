@@ -9,5 +9,7 @@
 
 Claude Desktop verbinden (MCP): Claude Desktop installieren und anmelden, dann **„Claude Desktop verbinden.bat“** doppelklicken und Claude Desktop neu starten. Details stehen in LIESMICH.txt.
 
+Updates: Ab dieser Version prüft „Labreporthelp starten.bat“ beim Start, ob es eine neuere Version gibt, und installiert sie automatisch. Deine Einrichtung bleibt erhalten.
+
 Node.js ist im Paket enthalten, du musst nichts weiter installieren.
 Die Dateien „Source code (zip)“ brauchst du nicht, die sind nur für Entwickler.
