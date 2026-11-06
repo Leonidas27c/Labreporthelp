@@ -1,6 +1,13 @@
 import type { Editor, JSONContent } from '@tiptap/react'
-import { DEFAULT_CHART, defaultAxis, type ChartBackground } from './chartModel'
+import { DEFAULT_CHART, defaultAxis, normalizeChart, snapChartSize, type ChartBackground } from './chartModel'
 import { contentWidth } from './insertPosition'
+import { MM } from './print'
+import { BOTTOM_RESERVE_MM, freeSpaceAt, pageInfo, relayout } from '../extensions/PageLayout'
+
+/** Abstand ober- und unterhalb eines Diagramms (12 pt, siehe index.css). */
+const CHART_MARGIN_PX = 16
+/** Ein Diagramm wird höchstens so stark verkleinert, damit es noch auf die Seite passt. */
+const MAX_SHRINK = 0.75
 
 /**
  * Werkzeuge, mit denen Claude das Dokument liest und Inhalte einfügt.
@@ -22,16 +29,36 @@ export class DocumentTools {
     this.pos = $to.depth >= 1 ? $to.after(1) : state.selection.to
   }
 
-  private insert(content: JSONContent[]) {
+  /** Fügt ein und gibt die Position des ersten eingefügten Blocks zurück. */
+  private async insert(content: JSONContent[]) {
     const before = this.editor.state.doc.content.size
     const pos = Math.min(this.pos ?? before, before)
     this.editor.chain().insertContentAt(pos, content).run()
     this.pos = pos + (this.editor.state.doc.content.size - before)
+    // Diagramme werden von React erst kurz danach gezeichnet. Danach die Seitenaufteilung
+    // aktualisieren, damit die Rückmeldung und die nächste Einfügung mit echten Größen rechnen.
+    await new Promise((r) => setTimeout(r, 30))
+    relayout(this.editor.view)
+    return pos
+  }
+
+  private nextPos() {
+    const size = this.editor.state.doc.content.size
+    return Math.min(this.pos ?? size, size)
+  }
+
+  /** Kurzer Hinweis für Claude, wo der Block gelandet ist (hilft beim Planen der nächsten Einfügung). */
+  private where(pos: number) {
+    const info = pageInfo(this.editor.view, pos)
+    if (!info) return ''
+    const free = Math.max(0, Math.round(info.freeBelowMm / 10))
+    const start = info.topMm < 1 && info.page > 1 ? ' (oben auf der Seite, weil es auf der vorigen nicht mehr ganz Platz hatte)' : ''
+    return ` Steht auf Seite ${info.page}${start}; darunter sind auf dieser Seite noch etwa ${free} cm frei.`
   }
 
   /** Führt ein Werkzeug anhand seines Namens aus (für Claude-Chat und Claude Desktop). */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  run(name: string, input: any): string {
+  async run(name: string, input: any): Promise<string> {
     switch (name) {
       case 'get_document':
         return this.getDocument()
@@ -48,7 +75,14 @@ export class DocumentTools {
 
   getDocument(): string {
     const lines: string[] = []
-    this.editor.state.doc.forEach((node) => {
+    let page = 1
+    this.editor.state.doc.forEach((node, pos) => {
+      // Seitenwechsel markieren, damit Claude die Aufteilung planen kann
+      const info = pageInfo(this.editor.view, pos)
+      if (info && info.page > page) {
+        page = info.page
+        lines.push(`--- Seite ${page} ---`)
+      }
       switch (node.type.name) {
         case 'heading':
           lines.push(`${'#'.repeat(node.attrs.level)} ${node.textContent}`)
@@ -78,7 +112,7 @@ export class DocumentTools {
     return lines.join('\n') || '(Das Dokument ist leer.)'
   }
 
-  insertTable(input: { caption: string; headers: string[]; rows: string[][] }) {
+  async insertTable(input: { caption: string; headers: string[]; rows: string[][] }) {
     input = { caption: input.caption ?? '', headers: input.headers ?? [], rows: input.rows ?? [] }
     const cols = Math.max(input.headers.length, ...input.rows.map((r) => r.length), 1)
     const cell = (type: 'tableHeader' | 'tableCell', text: string): JSONContent => ({
@@ -95,11 +129,11 @@ export class DocumentTools {
         ...input.rows.map((r) => ({ type: 'tableRow', content: pad(r).map((t) => cell('tableCell', t)) })),
       ],
     }
-    this.insert([table])
-    return `Tabelle mit ${cols} Spalten und ${input.rows.length} Zeilen eingefügt.`
+    const pos = await this.insert([table])
+    return `Tabelle mit ${cols} Spalten und ${input.rows.length} Zeilen eingefügt.${this.where(pos)}`
   }
 
-  insertChart(input: {
+  async insertChart(input: {
     x_label: string
     x_unit: string
     x_start: number
@@ -113,8 +147,8 @@ export class DocumentTools {
     height: number
   }) {
     const maxW = contentWidth(this.editor.view.dom)
-    const width = Math.round(Math.min(Math.max(input.width || 400, 120), maxW))
-    const height = Math.round(Math.min(Math.max(input.height || 300, 120), 900))
+    let width = Math.round(Math.min(Math.max(input.width || 400, 120), maxW))
+    let height = Math.round(Math.min(Math.max(input.height || 300, 120), 900))
     const axis = (label: string, unit: string, start: number, max: number) => ({
       ...defaultAxis(label),
       unit,
@@ -122,27 +156,41 @@ export class DocumentTools {
       max: Number(max) || 100,
       auto: true,
     })
-    this.insert([
-      {
-        type: 'chart',
-        attrs: {
-          ...DEFAULT_CHART,
-          width,
-          height,
-          offsetX: 0,
-          background: input.background ?? 'grid',
-          axes: {
-            x: axis(input.x_label, input.x_unit, input.x_start, input.x_max),
-            y: axis(input.y_label, input.y_unit, input.y_start, input.y_max),
-            y2: DEFAULT_CHART.axes.y2,
-          },
-        },
+    const attrs = {
+      ...DEFAULT_CHART,
+      width,
+      height,
+      offsetX: 0,
+      background: input.background ?? 'grid',
+      axes: {
+        x: axis(input.x_label, input.x_unit, input.x_start, input.x_max),
+        y: axis(input.y_label, input.y_unit, input.y_start, input.y_max),
+        y2: DEFAULT_CHART.axes.y2,
       },
-    ])
-    return 'Diagrammfeld eingefügt.'
+    }
+
+    // Passt das Diagramm nur knapp nicht mehr auf die Seite, etwas kleiner machen statt eine
+    // halbe Seite leer zu lassen. Sonst rutscht es auf die nächste Seite (PageLayout).
+    let shrunk = false
+    const free = freeSpaceAt(this.editor.view, this.nextPos()).freeMm * MM - BOTTOM_RESERVE_MM * MM - 2 * CHART_MARGIN_PX
+    const snapped = (w: number, h: number) => snapChartSize(normalizeChart({ ...attrs, width: w, height: h }), w, h, maxW)
+    if (snapped(width, height).height > free && free >= 150 && free >= height * MAX_SHRINK) {
+      const w = Math.round((width * free) / height) // Seitenverhältnis beibehalten
+      let h = Math.floor(free)
+      while (h > 120 && snapped(w, h).height > free) h -= 4
+      const s = snapped(w, h)
+      if (s.height <= free) {
+        width = s.width
+        height = s.height
+        shrunk = true
+      }
+    }
+
+    const pos = await this.insert([{ type: 'chart', attrs: { ...attrs, width, height } }])
+    return `Diagrammfeld eingefügt (${width} × ${height} px)${shrunk ? ', etwas verkleinert, damit es noch auf die Seite passt' : ''}.${this.where(pos)}`
   }
 
-  insertText(input: { blocks: { style: 'paragraph' | 'heading1' | 'heading2' | 'heading3' | 'bullet'; text: string }[] }) {
+  async insertText(input: { blocks: { style: 'paragraph' | 'heading1' | 'heading2' | 'heading3' | 'bullet'; text: string }[] }) {
     const content: JSONContent[] = []
     let bullets: JSONContent[] = []
     const flush = () => {
@@ -163,7 +211,8 @@ export class DocumentTools {
       }
     }
     flush()
-    this.insert(content)
+    if (!content.length) return 'Nichts eingefügt.'
+    await this.insert(content)
     return `${input.blocks.length} Textblöcke eingefügt.`
   }
 }

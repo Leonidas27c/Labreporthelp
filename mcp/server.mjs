@@ -122,14 +122,15 @@ function bridged(name, config) {
 bridged('get_document', {
   title: 'Dokument lesen',
   description:
-    'Liefert den aktuellen Inhalt des in Labreporthelp geöffneten Dokuments als Text (Überschriften mit #, Tabellen mit |).',
+    'Liefert den aktuellen Inhalt des in Labreporthelp geöffneten Dokuments als Text (Überschriften mit #, Tabellen mit |). „--- Seite N ---“ markiert, wo eine neue A4-Seite beginnt.',
   inputSchema: {},
 })
 
 bridged('insert_table', {
   title: 'Tabelle einfügen',
   description:
-    'Fügt in Labreporthelp an der Cursorposition eine Tabelle ein. Spaltenköpfe mit Einheit in eckigen Klammern, z. B. „Zeit t [s]“. Zahlen im deutschen Format. Keine Messwerte erfinden; fehlende Werte als leere Zellen.',
+    'Fügt in Labreporthelp an der Cursorposition eine Tabelle ein. Spaltenköpfe mit Einheit in eckigen Klammern, z. B. „Zeit t [s]“. Zahlen im deutschen Format. Keine Messwerte erfinden; fehlende Werte als leere Zellen. ' +
+    'Passt die Tabelle nicht mehr ganz auf die Seite, rutscht sie automatisch auf die nächste; die Antwort nennt die Seite und den restlichen Platz. Sehr lange Tabellen (mehr als ca. 30 Zeilen) lieber aufteilen.',
   inputSchema: {
     caption: z.string().describe('Tabellenüberschrift, z. B. „Tabelle 1: Messwerte“. Leer, wenn keine gewünscht.'),
     headers: z.array(z.string()).describe('Spaltenköpfe'),
@@ -140,7 +141,8 @@ bridged('insert_table', {
 bridged('insert_chart', {
   title: 'Diagrammfeld einfügen',
   description:
-    'Fügt in Labreporthelp an der Cursorposition ein leeres Diagrammfeld (Koordinatensystem mit Raster zum Einzeichnen) ein. Die Achsen werden automatisch in runde Abschnitte bis zum Endwert eingeteilt. Messpunkte kann das Programm noch nicht zeichnen.',
+    'Fügt in Labreporthelp an der Cursorposition ein leeres Diagrammfeld (Koordinatensystem mit Raster zum Einzeichnen) ein. Die Achsen werden automatisch in runde Abschnitte bis zum Endwert eingeteilt. Messpunkte kann das Programm noch nicht zeichnen. ' +
+    'Eine A4-Seite hat ca. 930 px nutzbare Höhe. Passt das Diagramm nur knapp nicht mehr, wird es etwas verkleinert, sonst rutscht es auf die nächste Seite; die Antwort nennt die Seite und den restlichen Platz. Nutze das, um die nächsten Einfügungen zu planen.',
   inputSchema: {
     x_label: z.string(),
     x_unit: z.string().describe('Einheit, z. B. „s“. Leer, wenn keine.'),
@@ -152,7 +154,7 @@ bridged('insert_chart', {
     y_max: z.number(),
     background: z.enum(['grid', 'dots', 'blank']).describe('grid = kariert, dots = punktiert, blank = blanko'),
     width: z.number().describe('Breite in Pixeln, üblich 300–600'),
-    height: z.number().describe('Höhe in Pixeln, üblich 250–450'),
+    height: z.number().describe('Höhe in Pixeln, üblich 250–400 (zwei Diagramme à 400 px passen auf eine Seite)'),
   },
 })
 

@@ -87,7 +87,8 @@ html, body, #root { margin: 0; height: 100%; }
 }
 
 /* ---------- Diagramm ---------- */
-.chart-node { position: relative; margin-top: 6pt; margin-bottom: 6pt; }
+/* Abstand ober- und unterhalb, damit Diagramme nicht am Text kleben */
+.chart-node { position: relative; margin-top: 12pt; margin-bottom: 12pt; }
 .chart-node.selected { outline: 2px solid var(--accent); outline-offset: 2px; }
 .chart-svg { display: block; background: #fff; }
 .axis-label { font: 12px system-ui, sans-serif; fill: var(--text); }
@@ -147,7 +148,7 @@ html, body, #root { margin: 0; height: 100%; }
 .page td p, .page th p { margin: 0; }
 .page .selectedCell { background: var(--accent-soft) !important; }
 
-.lab-table { position: relative; margin: 6pt 0 10pt; max-width: 100%; }
+.lab-table { position: relative; margin: 12pt 0 12pt; max-width: 100%; }
 .lab-table-frame { position: relative; }
 .lab-table th, .lab-table td { height: var(--tbl-row-h, auto); font-size: var(--tbl-font, inherit); border: 0; }
 .lab-table th { background: var(--tbl-head, transparent); }
@@ -297,6 +298,8 @@ html, body, #root { margin: 0; height: 100%; }
 .page-count { position: absolute; right: 0; bottom: -22px; font: 12px system-ui, sans-serif; color: var(--muted); }
 .page-wrap { margin-bottom: 28px; }
 #print-root { display: none; }
+/* Rutscht ein Block auf die nächste Seite, entsteht dieser Abstand (berechnet in PageLayout.ts) */
+.page > [data-page-push] { margin-top: var(--page-push) !important; }
 
 /* ---------- Drucken / PDF ---------- */
 /* Rand 0: so druckt der Browser keine eigene Kopf-/Fußzeile (Adresse, Titel, Datum).
@@ -317,6 +320,11 @@ html, body, #root { margin: 0; height: 100%; }
   #print-root .page .selectedCell { background: inherit !important; }
   #print-root .chart-node { outline: none !important; box-shadow: none !important; break-inside: avoid; }
   #print-root .page table { break-inside: auto; }
+  /* Beim Drucken wird aus dem Abstand ein echter Seitenumbruch */
+  #print-root .page > [data-page-push] { margin-top: 0 !important; break-before: page; }
+  #print-root .page > [data-page-push] > .chart-node { margin-top: 0; }
+  /* Tabellen, die auf eine Seite passen, nicht zerschneiden; lange Tabellen dürfen umbrechen */
+  #print-root .lab-table:not([data-long]) { break-inside: avoid; }
   #print-root .page tr, #print-root .page h1, #print-root .page h2, #print-root .page h3 { break-inside: avoid; }
   #print-root .page h1, #print-root .page h2, #print-root .page h3 { break-after: avoid; }
   * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }

@@ -74,6 +74,7 @@ Einrichtung (einmalig):
 **Drucken und PDF**
 - „Drucken / PDF“ (Strg+P) druckt nur das Dokument im A4-Format mit Seitenrändern, ohne Adresse und Datum am Rand
 - Gestrichelte Linien im Editor zeigen, wo beim Drucken eine neue Seite beginnt
+- Tabellen und Diagramme werden nicht von einem Seitenumbruch zerschnitten: passen sie nicht mehr auf die Seite, rutschen sie auf die nächste. Überschriften bleiben nicht allein unten auf der Seite stehen. Beim Drucken wird daraus ein echter Seitenumbruch.
 
 **Tabellen** (wie Diagramme: beweglich und mit Eigenschaften)
 - „Aufziehen“ → „Tabelle“ fügt eine echte Tabelle mit Kopfzeile ein (Größe passend zum Feld)

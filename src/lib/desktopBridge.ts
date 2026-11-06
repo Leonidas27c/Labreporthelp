@@ -31,7 +31,7 @@ export function useDesktopBridge(editor: Editor | null) {
         if (!stopped) retry = window.setTimeout(connect, RETRY_MS)
       }
       socket.onerror = () => socket?.close()
-      socket.onmessage = (ev) => {
+      socket.onmessage = async (ev) => {
         let msg: { id: number; tool: string; input: unknown }
         try {
           msg = JSON.parse(String(ev.data))
@@ -42,7 +42,7 @@ export function useDesktopBridge(editor: Editor | null) {
         if (now - lastCall > SEQUENCE_MS) tools.begin()
         lastCall = now
         try {
-          const result = tools.run(msg.tool, msg.input)
+          const result = await tools.run(msg.tool, msg.input)
           socket?.send(JSON.stringify({ id: msg.id, result }))
         } catch (err) {
           socket?.send(JSON.stringify({ id: msg.id, error: err instanceof Error ? err.message : String(err) }))

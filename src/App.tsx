@@ -16,6 +16,7 @@ import { useDesktopBridge } from './lib/desktopBridge'
 import { ChartNode } from './extensions/ChartNode'
 import { TablePlaceholderNode, TablePlaceholderUpgrade } from './extensions/TablePlaceholderNode'
 import { LabTable } from './extensions/LabTable'
+import { PageLayout } from './extensions/PageLayout'
 import { TablePanel } from './components/TablePanel'
 import { findTable } from './lib/tableModel'
 import {
@@ -49,6 +50,7 @@ export default function App() {
       ChartNode,
       TablePlaceholderNode,
       TablePlaceholderUpgrade,
+      PageLayout,
     ],
     content: autosaved.current?.content ?? EMPTY_CONTENT,
     editorProps: { attributes: { class: 'page', spellcheck: 'true' } },
