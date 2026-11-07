@@ -42,9 +42,9 @@ export function Toolbar({ editor, onNew, onOpen, onSave, onPrint, drawing, onTog
     <div className="toolbar" role="toolbar" aria-label="Werkzeugleiste">
       <div className="group">
         <button onClick={onNew} title="Neues Dokument">Neu</button>
-        <button onClick={onOpen} title="Dokument öffnen (Strg+O)">Öffnen</button>
+        <button onClick={onOpen} title="Dokument oder PDF öffnen (Strg+O). Mit Labreporthelp erstellte PDFs öffnen sich wieder vollständig bearbeitbar.">Öffnen</button>
         <button onClick={onSave} title="Dokument speichern (Strg+S), zum späteren Weiterbearbeiten">Speichern</button>
-        <button onClick={onPrint} title="Drucken oder als PDF speichern (Strg+P)">Drucken / PDF</button>
+        <button onClick={onPrint} title="Drucken oder als PDF speichern (Strg+P). Die PDF lässt sich später über „Öffnen“ wieder bearbeiten.">Drucken / PDF</button>
       </div>
       <div className="group">
         <button disabled={!s.canUndo} onClick={() => chain().undo().run()} title="Rückgängig (Strg+Z)">↶</button>

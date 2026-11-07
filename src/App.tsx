@@ -9,6 +9,8 @@ import Highlight from '@tiptap/extension-highlight'
 import { Toolbar } from './components/Toolbar'
 import { PageBreaks } from './components/PageBreaks'
 import { printDocument } from './lib/print'
+import { encodeEmbed } from './lib/pdfEmbed'
+import { importPdf } from './lib/pdfImport'
 import { DrawLayer } from './components/DrawLayer'
 import { ChartPanel } from './components/ChartPanel'
 import { ChatPanel } from './components/ChatPanel'
@@ -92,6 +94,21 @@ export default function App() {
     e.target.value = ''
     if (!file || !editor) return
     try {
+      if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
+        if (!window.confirm('PDF öffnen? Das aktuelle Dokument wird ersetzt. Nicht gespeicherte Änderungen gehen verloren.')) return
+        flash('PDF wird gelesen …')
+        const { doc, exact } = await importPdf(file)
+        editor.commands.setContent(doc.content)
+        setTitle(doc.title)
+        flash(`„${doc.title}“ geöffnet`)
+        if (!exact) {
+          window.alert(
+            'Diese PDF wurde nicht mit Labreporthelp erstellt (oder mit einem Browser, der die Projektdaten nicht übernimmt). ' +
+              'Der Text wurde übernommen und ist jetzt bearbeitbar. Formatierung, Tabellen und Diagramme bitte prüfen; Bilder und Diagramme fremder PDFs werden nicht übernommen.',
+          )
+        }
+        return
+      }
       const doc = parseDocument(await file.text())
       editor.commands.setContent(doc.content)
       setTitle(doc.title)
@@ -106,7 +123,9 @@ export default function App() {
     if (!editor) return
     // Auswahl aufheben, damit kein Auswahlrahmen mitgedruckt wird
     editor.commands.setTextSelection(editor.state.selection.to)
-    window.setTimeout(() => printDocument(editor.view.dom as HTMLElement, title), 50)
+    // Das Dokument kommt mit in die PDF, damit man sie später wieder in der App bearbeiten kann
+    const embed = encodeEmbed(createDocument(title, editor.getJSON())).catch(() => undefined)
+    window.setTimeout(async () => printDocument(editor.view.dom as HTMLElement, title, await embed), 50)
   }, [editor, title])
 
   // Tastenkürzel Strg+S, Strg+O und Strg+P
@@ -195,7 +214,7 @@ export default function App() {
       {!selectedChart && selectedTable && <TablePanel editor={editor} info={selectedTable} />}
       {chatOpen && <ChatPanel editor={editor} desktopConnected={desktopConnected} onClose={() => setChatOpen(false)} />}
       </div>
-      <input ref={fileInput} type="file" accept=".json,.lrh.json" hidden onChange={handleFile} />
+      <input ref={fileInput} type="file" accept=".json,.lrh.json,.pdf" hidden onChange={handleFile} />
     </div>
   )
 }

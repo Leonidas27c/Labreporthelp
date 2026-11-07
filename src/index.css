@@ -308,7 +308,8 @@ html, body, #root { margin: 0; height: 100%; }
 @media print {
   html, body { background: #fff !important; height: auto !important; overflow: visible !important; }
   body > #root { display: none !important; }
-  #print-root { display: block !important; }
+  #print-root { display: block !important; position: relative; }
+  #print-root .print-embed { position: absolute; left: 0; top: 0; width: 2mm; height: 2mm; display: block; color: transparent; text-decoration: none; }
   .print-frame { width: 100%; border-collapse: collapse; }
   .print-frame > thead > tr > td, .print-frame > tfoot > tr > td, .print-frame > tbody > tr > .print-body { padding: 0; border: 0; }
   .print-top { height: 25mm; }

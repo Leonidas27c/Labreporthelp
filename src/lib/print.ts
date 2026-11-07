@@ -9,7 +9,7 @@ export const USABLE_MM = PAGE_MM.height - PAGE_MM.marginTop - PAGE_MM.marginBott
  * Seite wiederholt. Der eigentliche Druckrand ist 0, deshalb druckt der Browser keine
  * eigenen Kopf- und Fußzeilen (Adresse, Titel, Datum).
  */
-export function printDocument(source: HTMLElement, title: string) {
+export function printDocument(source: HTMLElement, title: string, embedUri?: string) {
   document.getElementById('print-root')?.remove()
   const root = document.createElement('div')
   root.id = 'print-root'
@@ -30,6 +30,15 @@ export function printDocument(source: HTMLElement, title: string) {
   root.innerHTML = `<table class="print-frame"><thead><tr><td><div class="print-top"></div></td></tr></thead>
 <tfoot><tr><td><div class="print-bottom"></div></td></tr></tfoot><tbody><tr><td class="print-body"></td></tr></tbody></table>`
   root.querySelector('.print-body')!.appendChild(content)
+  if (embedUri) {
+    // Unsichtbarer Link mit dem ganzen Dokument, damit die PDF wieder bearbeitbar geöffnet
+    // werden kann (siehe pdfEmbed.ts). Durchsichtig statt opacity: 0, sonst lässt Chrome ihn weg.
+    const link = document.createElement('a')
+    link.className = 'print-embed'
+    link.href = embedUri
+    link.setAttribute('aria-hidden', 'true')
+    root.prepend(link)
+  }
   document.body.appendChild(root)
 
   const previous = document.title
