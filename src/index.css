@@ -318,6 +318,10 @@ html, body, #root { margin: 0; height: 100%; }
   #print-root .resize-handle, #print-root .size-badge, #print-root .table-grip, #print-root .column-resize-handle { display: none !important; }
   #print-root .lab-table-frame { outline: none !important; }
   #print-root .page .selectedCell { background: inherit !important; }
+  /* Zellen mit position: relative und Hintergrund übermalen im Druck (Chrome/Edge) die
+     gemeinsamen Rahmenlinien, z. B. die Linie unter der Kopfzeile. Im Druck braucht es
+     die Positionierung (für die Spaltengriffe) nicht. */
+  #print-root .page th, #print-root .page td { position: static !important; }
   #print-root .chart-node { outline: none !important; box-shadow: none !important; break-inside: avoid; }
   #print-root .page table { break-inside: auto; }
   /* Beim Drucken wird aus dem Abstand ein echter Seitenumbruch */
