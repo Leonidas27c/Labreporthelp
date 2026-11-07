@@ -74,6 +74,8 @@ Einrichtung (einmalig):
 **Drucken und PDF**
 - „Drucken / PDF“ (Strg+P) druckt nur das Dokument im A4-Format mit Seitenrändern, ohne Adresse und Datum am Rand
 - Gestrichelte Linien im Editor zeigen, wo beim Drucken eine neue Seite beginnt
+- PDFs nachträglich bearbeiten: „Öffnen“ nimmt auch PDFs. Eine mit Labreporthelp über „Als PDF speichern“ (Chrome/Edge) erzeugte PDF enthält das ganze Dokument unsichtbar und öffnet sich wieder vollständig bearbeitbar, mit Tabellen, Diagrammen und Formatierung. Danach ändern und neu als PDF speichern.
+- Fremde PDFs (oder PDFs aus „Microsoft Print to PDF“) werden als Text übernommen: Überschriften, Absätze, Listen und einfache Tabellen werden erkannt, Diagramme und Bilder nicht. Eingescannte PDFs ohne Text gehen nicht.
 - Tabellen und Diagramme werden nicht von einem Seitenumbruch zerschnitten: passen sie nicht mehr auf die Seite, rutschen sie auf die nächste. Überschriften bleiben nicht allein unten auf der Seite stehen. Beim Drucken wird daraus ein echter Seitenumbruch.
 
 **Tabellen** (wie Diagramme: beweglich und mit Eigenschaften)
@@ -117,8 +119,9 @@ Für Entwickler: Ein neues Release entsteht, wenn ein Tag wie `v0.1.0` gepusht w
    Der Browser öffnet sich von selbst. Das schwarze Fenster offen lassen, solange du arbeitest.
 
 Deine Dokumente: „Speichern“ legt eine Datei zum Weiterbearbeiten an (nimm sie z. B. per USB-Stick oder Cloud mit).
-„Drucken / PDF“ öffnet den Druckdialog. Dort als Drucker „Als PDF speichern“ bzw. „Microsoft Print to PDF“ wählen,
-um ein PDF zu bekommen.
+„Drucken / PDF“ öffnet den Druckdialog. Dort als Drucker „Als PDF speichern“ wählen, um ein PDF zu bekommen.
+Nur so lässt sich die PDF später über „Öffnen“ wieder vollständig bearbeiten („Microsoft Print to PDF“ geht auch,
+dann wird beim Öffnen aber nur der Text übernommen).
 
 ## Starten (für Einsteiger)
 
@@ -154,6 +157,7 @@ um ein PDF zu bekommen.
   - `src/lib/tableModel.ts` – Einstellungen der Tabelle und Hilfen zum Umbauen
   - `src/extensions/TablePlaceholderNode.ts` – wandelt alte Tabellen-Platzhalter um
   - `src/lib/documentFile.ts` – Speichern/Öffnen
+  - `src/lib/pdfEmbed.ts`, `src/lib/pdfImport.ts` – Dokument in der PDF mitspeichern, PDFs wieder öffnen
   - `src/components/ChatPanel.tsx` – Chat mit Claude
   - `src/lib/aboChat.ts` – Chat-Anfrage aus der App
   - `server/aboChat.mjs` – startet Claude Code auf deinem Rechner (läuft in `npm run dev` mit)
