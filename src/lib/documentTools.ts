@@ -1,4 +1,6 @@
 import type { Editor, JSONContent } from '@tiptap/react'
+import { Fragment, type Node as PMNode } from '@tiptap/pm/model'
+import type { Transaction } from '@tiptap/pm/state'
 import { DEFAULT_CHART, defaultAxis, normalizeChart, snapChartSize, type ChartBackground } from './chartModel'
 import { contentWidth } from './insertPosition'
 import { MM } from './print'
@@ -9,17 +11,56 @@ const CHART_MARGIN_PX = 16
 /** Ein Diagramm wird höchstens so stark verkleinert, damit es noch auf die Seite passt. */
 const MAX_SHRINK = 0.75
 
+type TextBlock = { style: 'paragraph' | 'heading1' | 'heading2' | 'heading3' | 'bullet'; text: string }
+
 /**
- * Werkzeuge, mit denen Claude das Dokument liest und Inhalte einfügt.
- * Alles wird hinter dem Absatz eingefügt, in dem der Cursor steht; mehrere
- * Einfügungen in einer Antwort landen der Reihe nach untereinander.
+ * Werkzeuge, mit denen Claude das Dokument liest, Inhalte einfügt und vorhandene
+ * Inhalte löscht, ersetzt oder verschiebt.
+ * Eingefügt wird hinter dem Absatz, in dem der Cursor steht (oder hinter einem
+ * angegebenen Block); mehrere Einfügungen landen der Reihe nach untereinander.
+ *
+ * get_document nummeriert die Blöcke ([1], [2], …). Die Nummern bleiben gültig,
+ * bis get_document das nächste Mal aufgerufen wird, auch wenn zwischendurch
+ * Blöcke gelöscht, eingefügt oder verschoben werden. So kann Claude in einer
+ * Antwort mehrere Änderungen mit den Nummern aus demselben Stand planen.
  */
 export class DocumentTools {
   private pos: number | null = null
   private editor: Editor
+  /** Startpositionen der Blöcke beim letzten get_document (null = gelöscht). */
+  private blocks: (number | null)[] = []
 
   constructor(editor: Editor) {
     this.editor = editor
+    // Positionen bei jeder Änderung nachführen, auch bei Eingaben der Person
+    editor.on('transaction', ({ transaction }) => this.track(transaction))
+  }
+
+  private track(tr: Transaction) {
+    if (!tr.docChanged) return
+    this.blocks = this.blocks.map((p) => {
+      if (p == null) return null
+      const r = tr.mapping.mapResult(p, 1)
+      return r.deletedAfter ? null : r.pos
+    })
+    if (this.pos != null) this.pos = tr.mapping.map(this.pos, 1)
+  }
+
+  /** Block mit der Nummer aus get_document suchen. */
+  private block(n: unknown): { node: PMNode; pos: number } {
+    const i = Number(n)
+    if (!Number.isInteger(i) || i < 1 || i > this.blocks.length) {
+      throw new Error(`Block ${String(n)} gibt es nicht. Erlaubt sind die Nummern 1 bis ${this.blocks.length} aus get_document.`)
+    }
+    const pos = this.blocks[i - 1]
+    const node = pos == null ? null : this.editor.state.doc.nodeAt(pos)
+    if (pos == null || !node) throw new Error(`Block ${i} wurde schon gelöscht oder ersetzt.`)
+    return { node, pos }
+  }
+
+  private dispatch(tr: Transaction) {
+    this.editor.view.dispatch(tr)
+    relayout(this.editor.view)
   }
 
   /** Startpunkt für eine neue Chat-Anfrage festlegen (hinter dem aktuellen Absatz). */
@@ -68,6 +109,14 @@ export class DocumentTools {
         return this.insertChart(input)
       case 'insert_text':
         return this.insertText(input)
+      case 'delete_blocks':
+        return this.deleteBlocks(input)
+      case 'replace_block':
+        return this.replaceBlock(input)
+      case 'move_blocks':
+        return this.moveBlocks(input)
+      case 'replace_text':
+        return this.replaceText(input)
       default:
         throw new Error(`Unbekanntes Werkzeug: ${name}`)
     }
@@ -76,6 +125,7 @@ export class DocumentTools {
   getDocument(): string {
     const lines: string[] = []
     let page = 1
+    this.blocks = []
     this.editor.state.doc.forEach((node, pos) => {
       // Seitenwechsel markieren, damit Claude die Aufteilung planen kann
       const info = pageInfo(this.editor.view, pos)
@@ -83,36 +133,126 @@ export class DocumentTools {
         page = info.page
         lines.push(`--- Seite ${page} ---`)
       }
-      switch (node.type.name) {
-        case 'heading':
-          lines.push(`${'#'.repeat(node.attrs.level)} ${node.textContent}`)
-          break
-        case 'table':
-          if (node.attrs.caption) lines.push(String(node.attrs.caption))
-          node.forEach((row) => {
-            const cells: string[] = []
-            row.forEach((cell) => cells.push(cell.textContent.replace(/\|/g, '/')))
-            lines.push(`| ${cells.join(' | ')} |`)
-          })
-          break
-        case 'chart': {
-          const a = node.attrs
-          const ax = a.axes ?? DEFAULT_CHART.axes
-          lines.push(`[Diagramm: x = ${ax.x.label} ${ax.x.unit}, y = ${ax.y.label} ${ax.y.unit}]`)
-          break
-        }
-        case 'bulletList':
-        case 'orderedList':
-          node.forEach((item) => lines.push(`- ${item.textContent}`))
-          break
-        default:
-          if (node.textContent) lines.push(node.textContent)
-      }
+      this.blocks.push(pos)
+      const own = describe(node)
+      own[0] = `[${this.blocks.length}] ${own[0]}`
+      lines.push(...own)
     })
     return lines.join('\n') || '(Das Dokument ist leer.)'
   }
 
-  async insertTable(input: { caption: string; headers: string[]; rows: string[][] }) {
+  /** Einfügeposition auf „hinter Block n“ setzen (0 = Anfang des Dokuments). */
+  private placeAfter(after: unknown) {
+    if (after === undefined || after === null || after === '') return
+    if (Number(after) === 0) {
+      this.pos = 0
+      return
+    }
+    const { node, pos } = this.block(after)
+    this.pos = pos + node.nodeSize
+  }
+
+  async deleteBlocks(input: { blocks: number[] }) {
+    const nums = [...new Set((input.blocks ?? []).map(Number))]
+    if (!nums.length) return 'Nichts gelöscht.'
+    const found = nums.map((n) => this.block(n)).sort((a, b) => b.pos - a.pos)
+    const { state } = this.editor
+    const tr = state.tr
+    if (found.length === state.doc.childCount) {
+      // Ein Dokument braucht mindestens einen Absatz
+      tr.replaceWith(0, state.doc.content.size, state.schema.nodes.paragraph.create())
+    } else {
+      for (const b of found) tr.delete(b.pos, b.pos + b.node.nodeSize)
+    }
+    this.dispatch(tr)
+    return `${found.length} Block/Blöcke gelöscht (${nums.join(', ')}). Die übrigen Nummern bleiben gültig.`
+  }
+
+  async replaceBlock(input: { block: number; blocks: TextBlock[] }) {
+    const { node, pos } = this.block(input.block)
+    const content = textContent(input.blocks ?? [])
+    const { state } = this.editor
+    const tr = state.tr
+    if (content.length) {
+      const nodes = content.map((c) => state.schema.nodeFromJSON(c))
+      tr.replaceWith(pos, pos + node.nodeSize, Fragment.from(nodes))
+    } else {
+      tr.delete(pos, pos + node.nodeSize)
+    }
+    this.dispatch(tr)
+    // Die Nummer zeigt danach auf den ersten neuen Block
+    if (content.length) this.blocks[Number(input.block) - 1] = pos
+    return content.length ? `Block ${input.block} ersetzt.` : `Block ${input.block} gelöscht.`
+  }
+
+  async moveBlocks(input: { blocks: number[]; after: number }) {
+    const nums = [...new Set((input.blocks ?? []).map(Number))]
+    if (!nums.length) return 'Nichts verschoben.'
+    if (nums.includes(Number(input.after))) throw new Error('Ein Block kann nicht hinter sich selbst verschoben werden.')
+    const moved = nums.map((n) => ({ n, ...this.block(n) }))
+    const target = Number(input.after) === 0 ? 0 : (() => {
+      const t = this.block(input.after)
+      return t.pos + t.node.nodeSize
+    })()
+    const tr = this.editor.state.tr
+    for (const b of [...moved].sort((a, c) => c.pos - a.pos)) tr.delete(b.pos, b.pos + b.node.nodeSize)
+    const at = tr.mapping.map(target, -1)
+    tr.insert(at, Fragment.from(moved.map((b) => b.node)))
+    this.dispatch(tr)
+    // Verschobene Blöcke behalten ihre Nummern
+    let p = at
+    for (const b of moved) {
+      this.blocks[b.n - 1] = p
+      p += b.node.nodeSize
+    }
+    return `Block/Blöcke ${nums.join(', ')} ${Number(input.after) === 0 ? 'an den Anfang' : `hinter Block ${input.after}`} verschoben. Die Nummern bleiben gültig.`
+  }
+
+  async replaceText(input: { find: string; replace: string; block?: number }) {
+    const find = String(input.find ?? '')
+    const replace = String(input.replace ?? '')
+    if (!find) throw new Error('find darf nicht leer sein.')
+    const { doc } = this.editor.state
+    let from = 0
+    let to = doc.content.size
+    if (input.block !== undefined && input.block !== null) {
+      const b = this.block(input.block)
+      from = b.pos
+      to = b.pos + b.node.nodeSize
+    }
+    const ranges: [number, number][] = []
+    doc.nodesBetween(from, to, (node, pos) => {
+      if (!node.isTextblock) return true
+      // Text des Absatzes mit den Positionen jedes Zeichens; andere Inline-Knoten trennen
+      let text = ''
+      const at: number[] = []
+      node.forEach((child, offset) => {
+        const start = pos + 1 + offset
+        if (child.isText) {
+          for (let i = 0; i < child.text!.length; i++) at.push(start + i)
+          text += child.text
+        } else {
+          at.push(start)
+          text += '\uFFFC'
+        }
+      })
+      for (let i = text.indexOf(find); i >= 0; i = text.indexOf(find, i + find.length)) {
+        ranges.push([at[i], at[i + find.length - 1] + 1])
+      }
+      return false
+    })
+    if (!ranges.length) return `„${find}“ kommt ${input.block ? `in Block ${input.block} ` : ''}nicht vor. Nichts geändert.`
+    const tr = this.editor.state.tr
+    for (const [a, b] of ranges.reverse()) {
+      if (replace) tr.insertText(replace, a, b)
+      else tr.delete(a, b)
+    }
+    this.dispatch(tr)
+    return `${ranges.length}× ersetzt.`
+  }
+
+  async insertTable(input: { caption: string; headers: string[]; rows: string[][]; after?: number }) {
+    this.placeAfter(input.after)
     input = { caption: input.caption ?? '', headers: input.headers ?? [], rows: input.rows ?? [] }
     const cols = Math.max(input.headers.length, ...input.rows.map((r) => r.length), 1)
     const cell = (type: 'tableHeader' | 'tableCell', text: string): JSONContent => ({
@@ -145,7 +285,9 @@ export class DocumentTools {
     background: ChartBackground
     width: number
     height: number
+    after?: number
   }) {
+    this.placeAfter(input.after)
     const maxW = contentWidth(this.editor.view.dom)
     let width = Math.round(Math.min(Math.max(input.width || 400, 120), maxW))
     let height = Math.round(Math.min(Math.max(input.height || 300, 120), 900))
@@ -190,29 +332,65 @@ export class DocumentTools {
     return `Diagrammfeld eingefügt (${width} × ${height} px)${shrunk ? ', etwas verkleinert, damit es noch auf die Seite passt' : ''}.${this.where(pos)}`
   }
 
-  async insertText(input: { blocks: { style: 'paragraph' | 'heading1' | 'heading2' | 'heading3' | 'bullet'; text: string }[] }) {
-    const content: JSONContent[] = []
-    let bullets: JSONContent[] = []
-    const flush = () => {
-      if (bullets.length) content.push({ type: 'bulletList', content: bullets })
-      bullets = []
-    }
-    for (const b of input.blocks) {
-      const text = b.text ? [{ type: 'text', text: b.text }] : []
-      if (b.style === 'bullet') {
-        bullets.push({ type: 'listItem', content: [{ type: 'paragraph', content: text }] })
-        continue
-      }
-      flush()
-      if (b.style.startsWith('heading')) {
-        content.push({ type: 'heading', attrs: { level: Number(b.style.slice(-1)) }, content: text })
-      } else {
-        content.push({ type: 'paragraph', content: text })
-      }
-    }
-    flush()
+  async insertText(input: { blocks: TextBlock[]; after?: number }) {
+    this.placeAfter(input.after)
+    const content = textContent(input.blocks ?? [])
     if (!content.length) return 'Nichts eingefügt.'
     await this.insert(content)
     return `${input.blocks.length} Textblöcke eingefügt.`
+  }
+}
+
+/** Textblöcke (Absatz, Überschrift, Aufzählungspunkt) in Editor-Inhalt umwandeln. */
+function textContent(blocks: TextBlock[]): JSONContent[] {
+  const content: JSONContent[] = []
+  let bullets: JSONContent[] = []
+  const flush = () => {
+    if (bullets.length) content.push({ type: 'bulletList', content: bullets })
+    bullets = []
+  }
+  for (const b of blocks) {
+    const text = b.text ? [{ type: 'text', text: b.text }] : []
+    if (b.style === 'bullet') {
+      bullets.push({ type: 'listItem', content: [{ type: 'paragraph', content: text }] })
+      continue
+    }
+    flush()
+    if (b.style?.startsWith('heading')) {
+      content.push({ type: 'heading', attrs: { level: Number(b.style.slice(-1)) }, content: text })
+    } else {
+      content.push({ type: 'paragraph', content: text })
+    }
+  }
+  flush()
+  return content
+}
+
+/** Ein Block als Textzeilen für get_document. */
+function describe(node: PMNode): string[] {
+  switch (node.type.name) {
+    case 'heading':
+      return [`${'#'.repeat(node.attrs.level)} ${node.textContent}`]
+    case 'table': {
+      const lines: string[] = node.attrs.caption ? [String(node.attrs.caption)] : []
+      node.forEach((row) => {
+        const cells: string[] = []
+        row.forEach((cell) => cells.push(cell.textContent.replace(/\|/g, '/')))
+        lines.push(`| ${cells.join(' | ')} |`)
+      })
+      return lines.length ? lines : ['(leere Tabelle)']
+    }
+    case 'chart': {
+      const ax = node.attrs.axes ?? DEFAULT_CHART.axes
+      return [`[Diagramm: x = ${ax.x.label} ${ax.x.unit}, y = ${ax.y.label} ${ax.y.unit}]`]
+    }
+    case 'bulletList':
+    case 'orderedList': {
+      const items: string[] = []
+      node.forEach((item) => items.push(`- ${item.textContent}`))
+      return items.length ? items : ['(leere Liste)']
+    }
+    default:
+      return [node.textContent || (node.type.name === 'paragraph' ? '(leere Zeile)' : `(${node.type.name})`)]
   }
 }
