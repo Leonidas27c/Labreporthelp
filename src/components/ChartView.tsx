@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, type CSSProperties } from 'react'
 import { NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react'
 import {
   axisTicks,
@@ -7,6 +7,7 @@ import {
   formatNumber,
   normalizeChart,
   snapChartSize,
+  type ChartAlign,
 } from '../lib/chartModel'
 import { contentWidth } from '../lib/insertPosition'
 import { useResize } from './useResize'
@@ -14,9 +15,18 @@ import { useMove } from './useMove'
 
 const INK = '#1d2330'
 
+/** Linker/rechter Rand: über auto-Ränder, damit es im Editor und im Druck gleich sitzt. */
+function alignStyle(align: ChartAlign | null, offsetX: number): CSSProperties {
+  if (align === 'center') return { marginLeft: 'auto', marginRight: 'auto' }
+  if (align === 'right') return { marginLeft: 'auto', marginRight: 0 }
+  if (align === 'left') return { marginLeft: 0 }
+  return { marginLeft: offsetX }
+}
+
 export function ChartView({ node, updateAttributes, selected, editor, getPos }: ReactNodeViewProps) {
   const a = normalizeChart(node.attrs)
-  const maxWidth = contentWidth(editor.view.dom) - a.offsetX
+  // Ausgerichtete Diagramme dürfen die ganze Breite nutzen; frei verschobene nur bis zum rechten Rand
+  const maxWidth = contentWidth(editor.view.dom) - (a.align ? 0 : a.offsetX)
   const { size, resizing, handleProps } = useResize(a.width, a.height, maxWidth, (s) => {
     const snapped = snapChartSize(a, s.width, s.height, maxWidth)
     updateAttributes({ width: snapped.width, height: snapped.height })
@@ -40,7 +50,7 @@ export function ChartView({ node, updateAttributes, selected, editor, getPos }: 
   return (
     <NodeViewWrapper
       className={`chart-node${selected ? ' selected' : ''}${resizing ? ' resizing' : ''}${moving ? ' moving' : ''}`}
-      style={{ width: w, height: h, marginLeft: a.offsetX, ...moveStyle }}
+      style={{ width: w, height: h, ...alignStyle(a.align, a.offsetX), ...moveStyle }}
       contentEditable={false}
       draggable={false}
       {...moveProps}

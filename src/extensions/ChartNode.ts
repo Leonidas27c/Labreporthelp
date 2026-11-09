@@ -18,6 +18,8 @@ export const ChartNode = Node.create({
       width: { default: 300 },
       height: { default: 300 },
       offsetX: { default: 0 },
+      // 'left' | 'center' | 'right'; null = frei verschoben (offsetX)
+      align: { default: null },
       background: { default: DEFAULT_CHART.background },
       cellSize: { default: DEFAULT_CHART.cellSize },
       majorEvery: { default: DEFAULT_CHART.majorEvery },

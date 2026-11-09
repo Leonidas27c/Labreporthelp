@@ -16,10 +16,14 @@ export interface AxisSettings {
   step: number
 }
 
+export type ChartAlign = 'left' | 'center' | 'right'
+
 export interface ChartAttrs {
   width: number
   height: number
   offsetX: number
+  /** Ausrichtung auf der Seite; null = frei verschoben (offsetX) */
+  align: ChartAlign | null
   background: ChartBackground
   /** Kantenlänge eines Kästchens in Pixeln */
   cellSize: number
@@ -40,7 +44,7 @@ export const defaultAxis = (label: string): AxisSettings => ({
   step: 10,
 })
 
-export const DEFAULT_CHART: Omit<ChartAttrs, 'width' | 'height' | 'offsetX'> = {
+export const DEFAULT_CHART: Omit<ChartAttrs, 'width' | 'height' | 'offsetX' | 'align'> = {
   background: 'grid',
   cellSize: 20,
   majorEvery: 5,
@@ -102,6 +106,7 @@ export function normalizeChart(raw: Record<string, unknown>): ChartAttrs {
     width: Number(r.width) || 300,
     height: Number(r.height) || 300,
     offsetX: Number(r.offsetX) || 0,
+    align: r.align === 'left' || r.align === 'center' || r.align === 'right' ? r.align : null,
     background: r.background ?? DEFAULT_CHART.background,
     cellSize: Number(r.cellSize) || DEFAULT_CHART.cellSize,
     majorEvery: Number(r.majorEvery) || DEFAULT_CHART.majorEvery,
