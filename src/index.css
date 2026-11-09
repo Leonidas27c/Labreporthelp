@@ -332,9 +332,13 @@ html, body, #root { margin: 0; height: 100%; }
   #print-root .lab-table:not([data-long]) { break-inside: avoid; }
   #print-root .page tr, #print-root .page h1, #print-root .page h2, #print-root .page h3 { break-inside: avoid; }
   #print-root .page h1, #print-root .page h2, #print-root .page h3 { break-after: avoid; }
-  /* Sehr helle, dünne Linien lassen viele Drucker weg: im Druck etwas kräftiger */
-  #print-root .chart-grid-minor { stroke: #aab6ca; }
-  #print-root .chart-grid-major { stroke: #6f7f9a; }
-  #print-root .chart-grid-dots { fill: #7d8ca6; }
+  /* Linien im Druck in reinem Schwarz: Grau- und Blautöne mischen Tintenstrahldrucker aus der
+     Farbpatrone; ist die leer, fehlen Raster und Tabellenlinien. Schwarz kommt aus der
+     schwarzen Patrone. Dafür dünner, damit das Raster nicht zu dunkel wirkt. */
+  #print-root .chart-grid-minor { stroke: #000; stroke-width: 0.35px; }
+  #print-root .chart-grid-major { stroke: #000; stroke-width: 0.9px; }
+  #print-root .chart-grid-dots { fill: #000; }
+  #print-root .chart-grid-dots circle { r: 0.9px; }
+  #print-root .lab-table { --tbl-line: #000 !important; }
   * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
