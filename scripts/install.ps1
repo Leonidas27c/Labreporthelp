@@ -42,6 +42,26 @@ try {
   npm install --no-audit --no-fund
   if ($LASTEXITCODE -ne 0) { throw 'npm install ist fehlgeschlagen.' }
 
+  Step 'markitdown einrichten (wandelt Versuchsanleitungen in Markdown um)'
+  $hasPython = $false
+  foreach ($cmd in @('py', 'python')) {
+    if (Have $cmd) {
+      $args0 = if ($cmd -eq 'py') { @('-3', '-c', 'import sys; print(sys.version_info >= (3, 10))') } else { @('-c', 'import sys; print(sys.version_info >= (3, 10))') }
+      try { if ((& $cmd @args0 2>$null) -eq 'True') { $hasPython = $true; break } } catch {}
+    }
+  }
+  if (-not $hasPython -and (Have 'winget')) {
+    Write-Host 'Python wird installiert (kann ein paar Minuten dauern) ...'
+    winget install -e --id Python.Python.3.13 --silent --accept-source-agreements --accept-package-agreements
+    Refresh-Path
+    $env:Path += ";$env:LOCALAPPDATA\Programs\Python\Launcher;$env:LOCALAPPDATA\Programs\Python\Python313"
+  }
+  npm run markitdown-setup
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host 'markitdown konnte nicht eingerichtet werden. Labreporthelp liest Anhänge dann wie bisher selbst.' -ForegroundColor Yellow
+    Write-Host 'Später nachholen: Python installieren und "npm run markitdown-setup" ausführen.'
+  }
+
   Step 'Programm vorbereiten (npm run build)'
   npm run build
   if ($LASTEXITCODE -ne 0) { throw 'npm run build ist fehlgeschlagen.' }

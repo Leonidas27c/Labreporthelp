@@ -323,11 +323,11 @@ export function ChatPanel({ editor, desktopConnected, onClose }: { editor: Edito
           <div className="attachments">
             {files.map((f, i) => (
               <span key={`${f.name}-${i}`} className="attachment">
-                📎 {f.name} <small>{f.kind}</small>
+                📎 {f.name} <small>{f.markdown ? `${f.kind} → Markdown` : f.kind}</small>
                 <button type="button" title="Entfernen" onClick={() => setFiles((cur) => cur.filter((_, j) => j !== i))}>✕</button>
               </span>
             ))}
-            {reading && <span className="attachment reading">Datei wird gelesen …</span>}
+            {reading && <span className="attachment reading">Datei wird gelesen und in Markdown umgewandelt …</span>}
           </div>
         )}
         <textarea
@@ -348,7 +348,7 @@ export function ChatPanel({ editor, desktopConnected, onClose }: { editor: Edito
             className="attach-btn"
             onClick={() => fileInput.current?.click()}
             disabled={busy || desktopMode}
-            title={desktopMode ? 'Dateien bitte direkt in Claude Desktop anhängen' : 'PDF, Word, PowerPoint, Bild oder Text anhängen'}
+            title={desktopMode ? 'Dateien bitte direkt in Claude Desktop anhängen' : 'PDF, Word, PowerPoint, Excel, Bild oder Text anhängen'}
           >
             📎 Datei
           </button>

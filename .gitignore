@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 release-out
+
+# Python mit markitdown (npm run markitdown-setup)
+.venv
+__pycache__
