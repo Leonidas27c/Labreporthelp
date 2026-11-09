@@ -70,6 +70,12 @@ export async function aboStatus(): Promise<AboStatus> {
   }
 }
 
+/**
+ * Rückmeldungen der Werkzeuge aus der letzten Antwort (Fehler und Hinweise). Sie gehen mit der
+ * nächsten Nachricht an Claude, damit Claude sieht, was nicht geklappt hat, und es beheben kann.
+ */
+let feedback: string[] = []
+
 const BLOCK = /```labreporthelp\s*([\s\S]*?)```/g
 
 /** Trennt den Antworttext von den Einfüge-Aktionen. */
@@ -110,6 +116,7 @@ export async function runAboChat(opts: {
       message: opts.message,
       model: opts.model,
       sessionId: opts.sessionId,
+      feedback: opts.sessionId ? feedback : [],
       document: tools.getDocument(),
       files: opts.files.flatMap((a) => a.files),
     }),
@@ -123,14 +130,19 @@ export async function runAboChat(opts: {
   const reply = Array.isArray(data.actions)
     ? { text: String(data.text ?? '').trim(), actions: data.actions as { tool: string; input: unknown }[], broken: false }
     : parseReply(String(data.text ?? ''))
+  feedback = []
   if (reply.text) onEvent({ type: 'text', text: reply.text })
-  for (const a of reply.actions) {
+  for (const [i, a] of reply.actions.entries()) {
     const label = ACTION_LABELS[a.tool] ?? a.tool
     try {
-      await tools.run(a.tool, a.input)
+      const result = await tools.run(a.tool, a.input)
       onEvent({ type: 'action', label, ok: true })
-    } catch {
-      onEvent({ type: 'action', label: `${label} fehlgeschlagen`, ok: false })
+      if (result.includes('Hinweis:')) feedback.push(`Aktion ${i + 1} (${a.tool}): ${result}`)
+    } catch (err) {
+      // Den Grund anzeigen, sonst sieht man nur „fehlgeschlagen“
+      const why = err instanceof Error ? err.message : String(err)
+      onEvent({ type: 'action', label: `${label} fehlgeschlagen: ${why}`, ok: false })
+      feedback.push(`Aktion ${i + 1} (${a.tool}) ist fehlgeschlagen: ${why}`)
     }
   }
   if (reply.broken) onEvent({ type: 'action', label: 'Ein Teil der Antwort konnte nicht eingefügt werden', ok: false })

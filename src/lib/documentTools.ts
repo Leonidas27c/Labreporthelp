@@ -29,6 +29,8 @@ export class DocumentTools {
   private editor: Editor
   /** Startpositionen der Blöcke beim letzten get_document (null = gelöscht). */
   private blocks: (number | null)[] = []
+  /** after-Wert der letzten Einfügung dieser Folge (siehe placeAfter). */
+  private anchor: number | null = null
 
   constructor(editor: Editor) {
     this.editor = editor
@@ -68,6 +70,7 @@ export class DocumentTools {
     const { state } = this.editor
     const $to = state.doc.resolve(state.selection.to)
     this.pos = $to.depth >= 1 ? $to.after(1) : state.selection.to
+    this.anchor = null
   }
 
   /** Fügt ein und gibt die Position des ersten eingefügten Blocks zurück. */
@@ -142,14 +145,35 @@ export class DocumentTools {
   }
 
   /** Einfügeposition auf „hinter Block n“ setzen (0 = Anfang des Dokuments). */
-  private placeAfter(after: unknown) {
-    if (after === undefined || after === null || after === '') return
-    if (Number(after) === 0) {
+  /**
+   * Einfügestelle aus `after` bestimmen. Gibt einen Hinweis für die Rückmeldung zurück,
+   * wenn `after` nicht wörtlich befolgt wurde.
+   *
+   * Claude gibt `after` oft bei mehreren Einfügungen einer Folge mit derselben Nummer an
+   * oder verweist auf einen Block, der vorher in derselben Antwort gelöscht wurde. Beides
+   * soll nicht dazu führen, dass Inhalte in umgekehrter Reihenfolge landen oder die
+   * Einfügung (z. B. eines Diagramms) ganz ausfällt: dann geht es an der laufenden Stelle
+   * unter der vorigen Einfügung weiter.
+   */
+  private placeAfter(after: unknown): string {
+    if (after === undefined || after === null || after === '') return ''
+    const n = Number(after)
+    // Dieselbe Nummer wie bei der vorigen Einfügung: darunter weitermachen
+    if (this.anchor !== null && n === this.anchor && this.pos != null) return ''
+    if (n === 0) {
       this.pos = 0
-      return
+      this.anchor = 0
+      return ''
     }
-    const { node, pos } = this.block(after)
-    this.pos = pos + node.nodeSize
+    try {
+      const { node, pos } = this.block(after)
+      this.pos = pos + node.nodeSize
+      this.anchor = n
+      return ''
+    } catch (err) {
+      const why = err instanceof Error ? err.message : String(err)
+      return ` Hinweis: ${why} Deshalb unter der vorigen Einfügung eingefügt.`
+    }
   }
 
   async deleteBlocks(input: { blocks: number[] }) {
@@ -252,7 +276,7 @@ export class DocumentTools {
   }
 
   async insertTable(input: { caption: string; headers: string[]; rows: string[][]; after?: number }) {
-    this.placeAfter(input.after)
+    const note = this.placeAfter(input.after)
     input = { caption: input.caption ?? '', headers: input.headers ?? [], rows: input.rows ?? [] }
     const cols = Math.max(input.headers.length, ...input.rows.map((r) => r.length), 1)
     const cell = (type: 'tableHeader' | 'tableCell', text: string): JSONContent => ({
@@ -270,7 +294,7 @@ export class DocumentTools {
       ],
     }
     const pos = await this.insert([table])
-    return `Tabelle mit ${cols} Spalten und ${input.rows.length} Zeilen eingefügt.${this.where(pos)}`
+    return `Tabelle mit ${cols} Spalten und ${input.rows.length} Zeilen eingefügt.${this.where(pos)}${note}`
   }
 
   async insertChart(input: {
@@ -287,7 +311,7 @@ export class DocumentTools {
     height: number
     after?: number
   }) {
-    this.placeAfter(input.after)
+    const note = this.placeAfter(input.after)
     const maxW = contentWidth(this.editor.view.dom)
     let width = Math.round(Math.min(Math.max(input.width || 400, 120), maxW))
     let height = Math.round(Math.min(Math.max(input.height || 300, 120), 900))
@@ -329,15 +353,15 @@ export class DocumentTools {
     }
 
     const pos = await this.insert([{ type: 'chart', attrs: { ...attrs, width, height } }])
-    return `Diagrammfeld eingefügt (${width} × ${height} px)${shrunk ? ', etwas verkleinert, damit es noch auf die Seite passt' : ''}.${this.where(pos)}`
+    return `Diagrammfeld eingefügt (${width} × ${height} px)${shrunk ? ', etwas verkleinert, damit es noch auf die Seite passt' : ''}.${this.where(pos)}${note}`
   }
 
   async insertText(input: { blocks: TextBlock[]; after?: number }) {
-    this.placeAfter(input.after)
+    const note = this.placeAfter(input.after)
     const content = textContent(input.blocks ?? [])
     if (!content.length) return 'Nichts eingefügt.'
     await this.insert(content)
-    return `${input.blocks.length} Textblöcke eingefügt.`
+    return `${input.blocks.length} Textblöcke eingefügt.${note}`
   }
 }
 

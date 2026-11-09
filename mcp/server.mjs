@@ -119,6 +119,10 @@ function bridged(name, config) {
   })
 }
 
+const AFTER =
+  'Hinter diesem Block (Nummer aus get_document) einfügen, 0 = ganz am Anfang. Ohne: an der Cursorposition bzw. unter der vorigen Einfügung. ' +
+  'Nur bei der ersten Einfügung einer Folge angeben; folgende Einfügungen ohne after landen der Reihe nach darunter. Neu eingefügte Blöcke haben noch keine Nummer, gelöschte Nummern gelten nicht mehr.'
+
 bridged('get_document', {
   title: 'Dokument lesen',
   description:
@@ -136,7 +140,7 @@ bridged('insert_table', {
     caption: z.string().describe('Tabellenüberschrift, z. B. „Tabelle 1: Messwerte“. Leer, wenn keine gewünscht.'),
     headers: z.array(z.string()).describe('Spaltenköpfe'),
     rows: z.array(z.array(z.string())).describe('Zeilen, jede Zeile eine Liste von Zellen'),
-    after: z.number().optional().describe('Hinter diesem Block (Nummer aus get_document) einfügen, 0 = ganz am Anfang. Ohne: an der Cursorposition.'),
+    after: z.number().optional().describe(AFTER),
   },
 })
 
@@ -157,7 +161,7 @@ bridged('insert_chart', {
     background: z.enum(['grid', 'dots', 'blank']).describe('grid = kariert, dots = punktiert, blank = blanko'),
     width: z.number().describe('Breite in Pixeln, üblich 300–600'),
     height: z.number().describe('Höhe in Pixeln, üblich 250–400 (zwei Diagramme à 400 px passen auf eine Seite)'),
-    after: z.number().optional().describe('Hinter diesem Block (Nummer aus get_document) einfügen, 0 = ganz am Anfang. Ohne: an der Cursorposition.'),
+    after: z.number().optional().describe(AFTER),
   },
 })
 
@@ -171,7 +175,7 @@ bridged('insert_text', {
         text: z.string(),
       }),
     ),
-    after: z.number().optional().describe('Hinter diesem Block (Nummer aus get_document) einfügen, 0 = ganz am Anfang. Ohne: an der Cursorposition.'),
+    after: z.number().optional().describe(AFTER),
   },
 })
 
