@@ -332,5 +332,9 @@ html, body, #root { margin: 0; height: 100%; }
   #print-root .lab-table:not([data-long]) { break-inside: avoid; }
   #print-root .page tr, #print-root .page h1, #print-root .page h2, #print-root .page h3 { break-inside: avoid; }
   #print-root .page h1, #print-root .page h2, #print-root .page h3 { break-after: avoid; }
+  /* Sehr helle, dünne Linien lassen viele Drucker weg: im Druck etwas kräftiger */
+  #print-root .chart-grid-minor { stroke: #aab6ca; }
+  #print-root .chart-grid-major { stroke: #6f7f9a; }
+  #print-root .chart-grid-dots { fill: #7d8ca6; }
   * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }

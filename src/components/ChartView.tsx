@@ -1,4 +1,4 @@
-import { useId, type CSSProperties } from 'react'
+import type { CSSProperties } from 'react'
 import { NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react'
 import {
   axisTicks,
@@ -14,6 +14,25 @@ import { useResize } from './useResize'
 import { useMove } from './useMove'
 
 const INK = '#1d2330'
+
+/** Senkrechte und waagerechte Rasterlinien im Abstand `step`, ausgehend von der linken unteren Ecke. */
+function gridPath(x0: number, top: number, w: number, h: number, step: number) {
+  if (step <= 0) return ''
+  const y0 = top + h
+  let d = ''
+  for (let x = step; x < w - 0.5; x += step) d += `M${x0 + x} ${top}V${y0}`
+  for (let y = step; y < h - 0.5; y += step) d += `M${x0} ${y0 - y}H${x0 + w}`
+  return d
+}
+
+/** Schnittpunkte des Rasters (für das Punktraster). */
+function gridPoints(x0: number, top: number, w: number, h: number, step: number) {
+  const y0 = top + h
+  const pts: [number, number][] = []
+  if (step <= 0) return pts
+  for (let x = 0; x <= w + 0.5; x += step) for (let y = 0; y <= h + 0.5; y += step) pts.push([x0 + x, y0 - y])
+  return pts
+}
 
 /** Linker/rechter Rand: über auto-Ränder, damit es im Editor und im Druck gleich sitzt. */
 function alignStyle(align: ChartAlign | null, offsetX: number): CSSProperties {
@@ -32,7 +51,6 @@ export function ChartView({ node, updateAttributes, selected, editor, getPos }: 
     updateAttributes({ width: snapped.width, height: snapped.height })
   })
   const { moving, moveStyle, moveProps } = useMove(editor, getPos, a.width)
-  const id = useId().replace(/[^a-zA-Z0-9]/g, '')
 
   // Auf ganze Abschnitte einrasten: das Raster endet oben und rechts an einer dicken Linie
   const { plotW, plotH, majorPx, width: w, height: h } = snapChartSize(a, size.width, size.height, maxWidth)
@@ -56,24 +74,20 @@ export function ChartView({ node, updateAttributes, selected, editor, getPos }: 
       {...moveProps}
     >
       <svg width={w} height={h} className="chart-svg">
-        <defs>
-          <pattern id={`grid-${id}`} width={cell} height={cell} patternUnits="userSpaceOnUse" x={x0} y={y0}>
-            <path d={`M ${cell} 0 L 0 0 0 ${cell}`} fill="none" stroke="#c9d3e3" strokeWidth="1" />
-          </pattern>
-          <pattern id={`dots-${id}`} width={cell} height={cell} patternUnits="userSpaceOnUse" x={x0} y={y0}>
-            <circle cx="0" cy="0" r="1.3" fill="#9aa8bf" />
-          </pattern>
-          <pattern id={`major-${id}`} width={majorPx} height={majorPx} patternUnits="userSpaceOnUse" x={x0} y={y0}>
-            <path d={`M ${majorPx} 0 L 0 0 0 ${majorPx}`} fill="none" stroke="#8d9bb3" strokeWidth="1.6" />
-          </pattern>
-        </defs>
-
-        {/* Hintergrund des Zeichenbereichs: wächst beim Vergrößern einfach mit */}
-        {a.background !== 'blank' && (
-          <rect x={x0} y={top} width={plotW} height={plotH} fill={`url(#${a.background === 'dots' ? 'dots' : 'grid'}-${id})`} />
+        {/* Raster als echte Linien statt SVG-Muster: Muster werden beim Drucken und in vielen
+            PDF-Programmen gerastert oder weggelassen, dann fehlen die Kästchen. */}
+        {a.background === 'grid' && (
+          <path className="chart-grid-minor" d={gridPath(x0, top, plotW, plotH, cell)} fill="none" stroke="#c9d3e3" strokeWidth="1" />
+        )}
+        {a.background === 'dots' && (
+          <g className="chart-grid-dots" fill="#9aa8bf">
+            {gridPoints(x0, top, plotW, plotH, cell).map(([cx, cy]) => (
+              <circle key={`${cx},${cy}`} cx={cx} cy={cy} r="1.3" />
+            ))}
+          </g>
         )}
         {a.showMajorLines && a.background !== 'blank' && (
-          <rect x={x0} y={top} width={plotW} height={plotH} fill={`url(#major-${id})`} />
+          <path className="chart-grid-major" d={gridPath(x0, top, plotW, plotH, majorPx)} fill="none" stroke="#8d9bb3" strokeWidth="1.6" />
         )}
 
         {/* Achsen und Rahmen: das Diagramm ist ringsum geschlossen */}
