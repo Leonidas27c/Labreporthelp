@@ -122,7 +122,8 @@ function bridged(name, config) {
 bridged('get_document', {
   title: 'Dokument lesen',
   description:
-    'Liefert den aktuellen Inhalt des in Labreporthelp geöffneten Dokuments als Text (Überschriften mit #, Tabellen mit |). „--- Seite N ---“ markiert, wo eine neue A4-Seite beginnt.',
+    'Liefert den aktuellen Inhalt des in Labreporthelp geöffneten Dokuments als Text (Überschriften mit #, Tabellen mit |). „--- Seite N ---“ markiert, wo eine neue A4-Seite beginnt. ' +
+    'Jeder Block beginnt mit seiner Nummer, z. B. „[3]“. Diese Nummern brauchen delete_blocks, replace_block, move_blocks, replace_text und after. Sie bleiben gültig, bis get_document erneut aufgerufen wird, auch wenn zwischendurch Blöcke gelöscht oder verschoben werden.',
   inputSchema: {},
 })
 
@@ -135,6 +136,7 @@ bridged('insert_table', {
     caption: z.string().describe('Tabellenüberschrift, z. B. „Tabelle 1: Messwerte“. Leer, wenn keine gewünscht.'),
     headers: z.array(z.string()).describe('Spaltenköpfe'),
     rows: z.array(z.array(z.string())).describe('Zeilen, jede Zeile eine Liste von Zellen'),
+    after: z.number().optional().describe('Hinter diesem Block (Nummer aus get_document) einfügen, 0 = ganz am Anfang. Ohne: an der Cursorposition.'),
   },
 })
 
@@ -155,12 +157,13 @@ bridged('insert_chart', {
     background: z.enum(['grid', 'dots', 'blank']).describe('grid = kariert, dots = punktiert, blank = blanko'),
     width: z.number().describe('Breite in Pixeln, üblich 300–600'),
     height: z.number().describe('Höhe in Pixeln, üblich 250–400 (zwei Diagramme à 400 px passen auf eine Seite)'),
+    after: z.number().optional().describe('Hinter diesem Block (Nummer aus get_document) einfügen, 0 = ganz am Anfang. Ohne: an der Cursorposition.'),
   },
 })
 
 bridged('insert_text', {
   title: 'Text einfügen',
-  description: 'Fügt in Labreporthelp an der Cursorposition Absätze, Überschriften oder Aufzählungspunkte ein.',
+  description: 'Fügt in Labreporthelp an der Cursorposition (oder hinter einem Block) Absätze, Überschriften oder Aufzählungspunkte ein.',
   inputSchema: {
     blocks: z.array(
       z.object({
@@ -168,6 +171,48 @@ bridged('insert_text', {
         text: z.string(),
       }),
     ),
+    after: z.number().optional().describe('Hinter diesem Block (Nummer aus get_document) einfügen, 0 = ganz am Anfang. Ohne: an der Cursorposition.'),
+  },
+})
+
+bridged('delete_blocks', {
+  title: 'Inhalte löschen',
+  description: 'Löscht Blöcke (Absätze, Überschriften, Listen, Tabellen, Diagramme) aus dem Dokument. Nummern aus get_document.',
+  inputSchema: {
+    blocks: z.array(z.number()).describe('Nummern der zu löschenden Blöcke'),
+  },
+})
+
+bridged('replace_block', {
+  title: 'Block ersetzen',
+  description: 'Ersetzt einen Block durch neuen Text (Absätze, Überschriften, Aufzählungspunkte). Leere Liste = Block löschen.',
+  inputSchema: {
+    block: z.number().describe('Nummer des Blocks aus get_document'),
+    blocks: z.array(
+      z.object({
+        style: z.enum(['paragraph', 'heading1', 'heading2', 'heading3', 'bullet']),
+        text: z.string(),
+      }),
+    ),
+  },
+})
+
+bridged('move_blocks', {
+  title: 'Inhalte verschieben',
+  description: 'Verschiebt Blöcke an eine andere Stelle. Sie landen in der angegebenen Reihenfolge hinter dem Zielblock.',
+  inputSchema: {
+    blocks: z.array(z.number()).describe('Nummern der zu verschiebenden Blöcke, in der gewünschten Reihenfolge'),
+    after: z.number().describe('Hinter diesen Block verschieben, 0 = ganz an den Anfang'),
+  },
+})
+
+bridged('replace_text', {
+  title: 'Text ersetzen',
+  description: 'Sucht einen Text und ersetzt jedes Vorkommen (auch in Tabellen). Die Formatierung drumherum bleibt erhalten. Leeres replace löscht den Text.',
+  inputSchema: {
+    find: z.string(),
+    replace: z.string(),
+    block: z.number().optional().describe('Nur in diesem Block suchen (Nummer aus get_document). Ohne: im ganzen Dokument.'),
   },
 })
 
