@@ -14,6 +14,10 @@ const ACTION_LABELS: Record<string, string> = {
   insert_table: 'Tabelle eingefügt',
   insert_chart: 'Diagramm eingefügt',
   insert_text: 'Text eingefügt',
+  delete_blocks: 'Inhalt gelöscht',
+  replace_block: 'Absatz ersetzt',
+  move_blocks: 'Inhalt verschoben',
+  replace_text: 'Text ersetzt',
 }
 
 export type ChatEvent =
