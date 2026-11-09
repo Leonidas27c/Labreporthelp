@@ -11,5 +11,7 @@ Claude Desktop verbinden (MCP): Claude Desktop installieren und anmelden, dann *
 
 Updates: Ab dieser Version prüft „Labreporthelp starten.bat“ beim Start, ob es eine neuere Version gibt, und installiert sie automatisch. Deine Einrichtung bleibt erhalten.
 
-Node.js ist im Paket enthalten, du musst nichts weiter installieren.
+Neu: Angehängte Versuchsanleitungen (PDF, Word, PowerPoint, Excel) werden vor dem Chat mit Microsoft markitdown in Markdown umgewandelt, damit Claude Überschriften und Tabellen sauber erkennt.
+
+Node.js und Python (mit markitdown) sind im Paket enthalten, du musst nichts weiter installieren.
 Die Dateien „Source code (zip)“ brauchst du nicht, die sind nur für Entwickler.

@@ -70,20 +70,6 @@ export async function aboStatus(): Promise<AboStatus> {
   }
 }
 
-/** Angehängte Datei so aufbereiten, dass der lokale Server sie als Datei speichern kann. */
-function toFile(a: Attachment) {
-  const b = a.block
-  if ((b.type === 'document' || b.type === 'image') && b.source.type === 'base64') {
-    const ext = b.source.media_type.split('/')[1]
-    const name = a.name.toLowerCase().endsWith(`.${ext}`) || b.type === 'document' ? a.name : `${a.name}.${ext}`
-    return { name, encoding: 'base64', data: b.source.data }
-  }
-  if (b.type === 'document' && b.source.type === 'text') {
-    return { name: `${a.name}.txt`, encoding: 'utf8', data: b.source.data }
-  }
-  return { name: `${a.name}.txt`, encoding: 'utf8', data: '' }
-}
-
 const BLOCK = /```labreporthelp\s*([\s\S]*?)```/g
 
 /** Trennt den Antworttext von den Einfüge-Aktionen. */
@@ -125,7 +111,7 @@ export async function runAboChat(opts: {
       model: opts.model,
       sessionId: opts.sessionId,
       document: tools.getDocument(),
-      files: opts.files.map(toFile),
+      files: opts.files.flatMap((a) => a.files),
     }),
   }).catch(() => {
     throw new Error('Der lokale Server antwortet nicht. Läuft `npm run dev` noch?')
