@@ -50,7 +50,8 @@ Antwortformat (fest vorgegeben):
   insert_table: input = {"caption": "Tabelle 1: ... (oder leer)", "headers": ["..."], "rows": [["...", "..."]]}
   insert_chart: input = {"x_label": "...", "x_unit": "...", "x_start": 0, "x_max": 10, "y_label": "...", "y_unit": "...", "y_start": 0, "y_max": 50, "background": "grid|dots|blank", "width": 500, "height": 350}
   Alle Felder sind Pflicht, Zahlen als Zahlen (mit Punkt). width üblich 300–600, height 250–450.
-  Optional bei allen drei insert-Werkzeugen: "after": N fügt hinter Block N ein (0 = ganz am Anfang); folgende Einfügungen landen darunter. Ohne after wird an der Cursorposition eingefügt.
+  Optional bei allen drei insert-Werkzeugen: "after": N fügt hinter Block N ein (0 = ganz am Anfang). Ohne after wird an der Cursorposition eingefügt.
+  Wichtig zu after: Gib after nur bei der ERSTEN Einfügung einer zusammenhängenden Folge an. Alle folgenden Einfügungen ohne after landen automatisch der Reihe nach darunter. Gib dieselbe Nummer nicht bei mehreren Einfügungen an. N ist immer eine Nummer aus dem Dokumentinhalt oben: Blöcke, die du in dieser Antwort neu einfügst, haben keine Nummer, und Blöcke, die du in dieser Antwort löschst, kann after nicht mehr verwenden.
   delete_blocks: input = {"blocks": [4, 5, 6]}  löscht diese Blöcke.
   replace_block: input = {"block": 4, "blocks": [{"style": "paragraph", "text": "..."}]}  ersetzt Block 4 durch neuen Text (gleiches Format wie insert_text).
   move_blocks:   input = {"blocks": [7, 8], "after": 2}  verschiebt die Blöcke in dieser Reihenfolge hinter Block 2 (after 0 = an den Anfang).
@@ -206,12 +207,14 @@ async function chat(req, res) {
   await mkdir(WORK_DIR, { recursive: true })
   await writeFile(join(WORK_DIR, 'labreporthelp-system.md'), SYSTEM_PROMPT, 'utf8')
   const { names } = await saveFiles(body.files)
+  const feedback = Array.isArray(body.feedback) ? body.feedback.map(String).slice(0, 30) : []
 
   const prompt = [
     'Aktueller Dokumentinhalt (Blocknummer in [ ], Überschriften mit #, Tabellen mit |):',
     '"""',
     String(body.document ?? '').slice(0, 100_000) || '(leer)',
     '"""',
+    feedback.length ? `\nRückmeldung zu deinen Aktionen aus der letzten Antwort (bitte berücksichtigen, falls etwas fehlt):\n${feedback.map((f) => `- ${f}`).join('\n')}` : '',
     names.length ? `\nAngehängte Dateien (mit Read lesen):\n${names.map((n) => `- ./${n}`).join('\n')}` : '',
     `\nNachricht der Person:\n${body.message}`,
   ].join('\n')
