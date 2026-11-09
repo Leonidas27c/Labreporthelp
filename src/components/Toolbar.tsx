@@ -1,6 +1,23 @@
 import type { Editor } from '@tiptap/react'
 import { useEditorState } from '@tiptap/react'
+import { NodeSelection } from '@tiptap/pm/state'
 import { ColorMenu } from './ColorMenu'
+
+type Align = 'left' | 'center' | 'right'
+
+/** Ausgewähltes Diagramm (oder null), damit die Ausrichtungs-Buttons es ausrichten. */
+function selectedChart(e: Editor) {
+  const sel = e.state.selection
+  return sel instanceof NodeSelection && sel.node.type.name === 'chart' ? sel : null
+}
+
+function chartAlign(e: Editor): Align | null {
+  const sel = selectedChart(e)
+  if (!sel) return null
+  const a = sel.node.attrs
+  if (a.align === 'left' || a.align === 'center' || a.align === 'right') return a.align
+  return (Number(a.offsetX) || 0) === 0 ? 'left' : null
+}
 
 interface ToolbarProps {
   editor: Editor
@@ -28,15 +45,26 @@ export function Toolbar({ editor, onNew, onOpen, onSave, onPrint, drawing, onTog
       h3: e.isActive('heading', { level: 3 }),
       bullet: e.isActive('bulletList'),
       ordered: e.isActive('orderedList'),
-      left: e.isActive({ textAlign: 'left' }),
-      center: e.isActive({ textAlign: 'center' }),
-      right: e.isActive({ textAlign: 'right' }),
-      justify: e.isActive({ textAlign: 'justify' }),
+      chart: selectedChart(e) !== null,
+      left: selectedChart(e) ? chartAlign(e) === 'left' : e.isActive({ textAlign: 'left' }),
+      center: selectedChart(e) ? chartAlign(e) === 'center' : e.isActive({ textAlign: 'center' }),
+      right: selectedChart(e) ? chartAlign(e) === 'right' : e.isActive({ textAlign: 'right' }),
+      justify: !selectedChart(e) && e.isActive({ textAlign: 'justify' }),
       canUndo: e.can().undo(),
       canRedo: e.can().redo(),
     }),
   })
   const chain = () => editor.chain().focus()
+  // Ist ein Diagramm ausgewählt, richten die Buttons das Diagramm aus, sonst den Text
+  const align = (value: Align) => {
+    const sel = selectedChart(editor)
+    if (!sel) return chain().setTextAlign(value).run()
+    const { tr } = editor.state
+    tr.setNodeMarkup(sel.from, undefined, { ...sel.node.attrs, align: value, offsetX: 0 })
+    tr.setSelection(NodeSelection.create(tr.doc, sel.from))
+    editor.view.dispatch(tr)
+    editor.view.focus()
+  }
 
   return (
     <div className="toolbar" role="toolbar" aria-label="Werkzeugleiste">
@@ -68,10 +96,10 @@ export function Toolbar({ editor, onNew, onOpen, onSave, onPrint, drawing, onTog
         <button className={s.ordered ? 'active' : ''} onClick={() => chain().toggleOrderedList().run()} title="Nummerierte Liste">1. Liste</button>
       </div>
       <div className="group">
-        <button className={s.left ? 'active' : ''} onClick={() => chain().setTextAlign('left').run()} title="Linksbündig">⯇</button>
-        <button className={s.center ? 'active' : ''} onClick={() => chain().setTextAlign('center').run()} title="Zentriert">≡</button>
-        <button className={s.right ? 'active' : ''} onClick={() => chain().setTextAlign('right').run()} title="Rechtsbündig">⯈</button>
-        <button className={s.justify ? 'active' : ''} onClick={() => chain().setTextAlign('justify').run()} title="Blocksatz">☰</button>
+        <button className={s.left ? 'active' : ''} onClick={() => align('left')} title={s.chart ? 'Diagramm linksbündig' : 'Linksbündig'}>⯇</button>
+        <button className={s.center ? 'active' : ''} onClick={() => align('center')} title={s.chart ? 'Diagramm zentrieren' : 'Zentriert'}>≡</button>
+        <button className={s.right ? 'active' : ''} onClick={() => align('right')} title={s.chart ? 'Diagramm rechtsbündig' : 'Rechtsbündig'}>⯈</button>
+        <button className={s.justify ? 'active' : ''} disabled={s.chart} onClick={() => chain().setTextAlign('justify').run()} title="Blocksatz">☰</button>
       </div>
       <div className="group">
         <button
