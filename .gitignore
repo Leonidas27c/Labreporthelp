@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 release-out
+
+# Reste der früheren markitdown-Einrichtung (Ordner kann gelöscht werden)
+.venv
+__pycache__
