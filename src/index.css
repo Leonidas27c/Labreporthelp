@@ -374,6 +374,24 @@ html, body, #root { margin: 0; height: 100%; }
   #print-root .chart-grid-major { stroke: #000; stroke-width: 0.9px; }
   #print-root .chart-grid-dots { fill: #000; }
   #print-root .chart-grid-dots circle { r: 0.9px; }
+  #print-root .chart-point-selection, #print-root .chart-hit { display: none; }
   #print-root .lab-table { --tbl-line: #000 !important; }
   * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
+
+/* ---------- Einzelne Messpunkte und Ausreißer ---------- */
+.chart-hit circle { cursor: pointer; }
+.chart-point-selection { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 3 2; }
+.points-block { display: flex; flex-direction: column; gap: 4px; }
+.points-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.points-head button.link { font: inherit; font-size: 12px; border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; }
+.points-table { max-height: 240px; overflow: auto; border: 1px solid var(--border); border-radius: 6px; }
+.points-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.points-table th { position: sticky; top: 0; background: var(--bg); color: var(--muted); font-weight: 600; text-align: left; padding: 4px 6px; z-index: 1; }
+.points-table td { padding: 2px 4px; border-top: 1px solid var(--border); }
+.points-table td.num { color: var(--muted); text-align: right; width: 1%; padding-right: 6px; }
+.points-table td.check { text-align: center; width: 1%; }
+.points-table .side-panel input, .side-panel .points-table input[inputmode] { padding: 2px 4px; font-size: 12px; min-width: 0; }
+.points-table tr { cursor: pointer; }
+.points-table tr.selected td { background: var(--accent-soft); }
+.points-table tr.outlier td.num { color: #c62828; font-weight: 600; }

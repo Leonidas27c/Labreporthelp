@@ -13,6 +13,8 @@ import { contentWidth } from '../lib/insertPosition'
 import { useResize } from './useResize'
 import { useMove } from './useMove'
 import { ChartSeriesLayer } from './ChartSeriesLayer'
+import { NodeSelection } from '@tiptap/pm/state'
+import { selectPoint, usePointSelection } from '../lib/chartSelection'
 
 const INK = '#1d2330'
 
@@ -52,6 +54,25 @@ export function ChartView({ node, updateAttributes, selected, editor, getPos }: 
     updateAttributes({ width: snapped.width, height: snapped.height })
   })
   const { moving, moveStyle, moveProps } = useMove(editor, getPos, a.width)
+  const pointSel = usePointSelection()
+  const myPos = getPos()
+  const selPoint = selected && pointSel && pointSel.pos === myPos ? pointSel : null
+
+  /** Messpunkt anklicken: Diagramm auswählen und den Punkt in der Seitenleiste öffnen (statt zu verschieben). */
+  const pick = (series: string, index: number, e: React.PointerEvent) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    const pos = getPos()
+    if (typeof pos !== 'number') return
+    selectPoint({ pos, series, index })
+    if (!selected) editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, pos)))
+  }
+  const onPointerDown = (e: React.PointerEvent) => {
+    // Klick neben die Punkte hebt die Punktauswahl auf
+    if (e.button === 0) selectPoint(null)
+    moveProps.onPointerDown(e)
+  }
 
   // Auf ganze Abschnitte einrasten: das Raster endet oben und rechts an einer dicken Linie
   const { plotW, plotH, majorPx, width: w, height: h } = snapChartSize(a, size.width, size.height, maxWidth)
@@ -73,6 +94,7 @@ export function ChartView({ node, updateAttributes, selected, editor, getPos }: 
       contentEditable={false}
       draggable={false}
       {...moveProps}
+      onPointerDown={onPointerDown}
     >
       <svg width={w} height={h} className="chart-svg">
         {/* Raster als echte Linien statt SVG-Muster: Muster werden beim Drucken und in vielen
@@ -125,7 +147,16 @@ export function ChartView({ node, updateAttributes, selected, editor, getPos }: 
         )}
 
         {/* Messwerte */}
-        <ChartSeriesLayer attrs={{ ...a, series: node.attrs.series, legend: node.attrs.legend }} x0={x0} y0={y0} plotW={plotW} plotH={plotH} majorPx={majorPx} />
+        <ChartSeriesLayer
+          attrs={{ ...a, series: node.attrs.series, legend: node.attrs.legend }}
+          x0={x0}
+          y0={y0}
+          plotW={plotW}
+          plotH={plotH}
+          majorPx={majorPx}
+          selected={selPoint}
+          onPick={pick}
+        />
       </svg>
       <div className="resize-handle" title="Ziehen zum Vergrößern" {...handleProps} />
       {resizing && <div className="size-badge">{Math.round(w)} × {Math.round(h)} px</div>}
