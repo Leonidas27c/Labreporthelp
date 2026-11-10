@@ -18,6 +18,7 @@ import { useDesktopBridge } from './lib/desktopBridge'
 import { ChartNode } from './extensions/ChartNode'
 import { TablePlaceholderNode, TablePlaceholderUpgrade } from './extensions/TablePlaceholderNode'
 import { LabTable } from './extensions/LabTable'
+import { LabData, LabTableCell, LabTableHeader } from './extensions/LabData'
 import { PageLayout } from './extensions/PageLayout'
 import { TablePanel } from './components/TablePanel'
 import { findTable } from './lib/tableModel'
@@ -44,7 +45,9 @@ export default function App() {
     extensions: [
       StarterKit,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      TableKit.configure({ table: false }),
+      TableKit.configure({ table: false, tableCell: false, tableHeader: false }),
+      LabTableCell,
+      LabTableHeader,
       LabTable.configure({ resizable: true, allowTableNodeSelection: true, cellMinWidth: 40 }),
       TextStyle,
       Color,
@@ -53,6 +56,7 @@ export default function App() {
       TablePlaceholderNode,
       TablePlaceholderUpgrade,
       PageLayout,
+      LabData,
     ],
     content: autosaved.current?.content ?? EMPTY_CONTENT,
     editorProps: { attributes: { class: 'page', spellcheck: 'true' } },

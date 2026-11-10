@@ -17,6 +17,7 @@ import {
   type UnitStyle,
 } from '../lib/tableModel'
 import { NumberInput, TextInput } from './PanelInputs'
+import { FormulaSection } from './FormulaSection'
 
 const LINE_COLORS = ['#000000', '#1f2933', '#5f6b76', '#8d9bb3', '#1f4e79', '#17696f', '#2e6b30', '#9b1c1f']
 const FILL_COLORS = ['', '#eef2f8', '#e6e9ed', '#d8e8fb', '#d3f2dc', '#fff3a3', '#fde3c8', '#fbdde2']
@@ -186,6 +187,7 @@ export function TablePanel({ editor, info }: { editor: Editor; info: TableInfo }
             <NumberInput lazy key={`w${pos}-${col}`} value={colWidth} min={40} max={maxW} onChange={(v) => setColWidth(Math.round(v))} />
           </label>
         </div>
+        {info.headerRow && <FormulaSection key={`f${pos}-${col}`} editor={editor} pos={pos} col={col} cols={info.cols} cellPos={cells[0]} />}
         <fieldset style={{ marginTop: 10 }}>
           <legend>Einheiten schreiben als</legend>
           <div className="segmented">

@@ -11,6 +11,7 @@ import {
   type ChartAttrs,
 } from '../lib/chartModel'
 import { NumberInput } from './PanelInputs'
+import { SeriesSection, type ChartPatch } from './ChartSeriesPanel'
 
 interface ChartPanelProps {
   editor: Editor
@@ -27,7 +28,7 @@ export function ChartPanel({ editor, pos, attrs }: ChartPanelProps) {
   const axisKey: AxisKey = tab === 'y2' && a.axisCount < 3 ? 'x' : tab
   const axis = a.axes[axisKey]
 
-  const update = (patch: Partial<ChartAttrs>) => {
+  const update = (patch: Partial<ChartAttrs> | ChartPatch) => {
     const { state, view } = editor
     const node = state.doc.nodeAt(pos)
     if (!node) return
@@ -52,6 +53,8 @@ export function ChartPanel({ editor, pos, attrs }: ChartPanelProps) {
   return (
     <aside className="side-panel" aria-label="Diagramm formatieren">
       <h2>Diagramm formatieren</h2>
+
+      <SeriesSection editor={editor} pos={pos} chart={a} rawSeries={attrs.series} legend={attrs.legend} update={update} />
 
       <section>
         <h3>Achsen</h3>

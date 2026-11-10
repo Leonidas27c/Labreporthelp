@@ -406,7 +406,9 @@ function describe(node: PMNode): string[] {
     }
     case 'chart': {
       const ax = node.attrs.axes ?? DEFAULT_CHART.axes
-      return [`[Diagramm: x = ${ax.x.label} ${ax.x.unit}, y = ${ax.y.label} ${ax.y.unit}]`]
+      const series = Array.isArray(node.attrs.series) ? (node.attrs.series as { name?: string; points?: unknown[] }[]) : []
+      const data = series.length ? `, Messreihen: ${series.map((x) => `${x.name || 'ohne Namen'} (${x.points?.length ?? 0} Punkte)`).join('; ')}` : ''
+      return [`[Diagramm: x = ${ax.x.label} ${ax.x.unit}, y = ${ax.y.label} ${ax.y.unit}${data}]`]
     }
     case 'bulletList':
     case 'orderedList': {

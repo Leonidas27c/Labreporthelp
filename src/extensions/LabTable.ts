@@ -53,6 +53,8 @@ export const LabTable = Table.extend({
       rowHeight: attr('row-height', d.rowHeight, Number),
       fontSize: attr('font-size', d.fontSize, Number),
       unitStyle: attr('unit-style', d.unitStyle),
+      // Kennung, über die Diagramme ihre Messwerte aus dieser Tabelle holen
+      uid: attr<string | null>('uid', null),
     }
   },
 
