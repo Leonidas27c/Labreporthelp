@@ -19,6 +19,7 @@ import { ChartNode } from './extensions/ChartNode'
 import { TablePlaceholderNode, TablePlaceholderUpgrade } from './extensions/TablePlaceholderNode'
 import { LabTable } from './extensions/LabTable'
 import { LabData, LabTableCell, LabTableHeader } from './extensions/LabData'
+import { TableFill } from './extensions/TableFill'
 import { PageLayout } from './extensions/PageLayout'
 import { TablePanel } from './components/TablePanel'
 import { findTable } from './lib/tableModel'
@@ -57,6 +58,7 @@ export default function App() {
       TablePlaceholderUpgrade,
       PageLayout,
       LabData,
+      TableFill,
     ],
     content: autosaved.current?.content ?? EMPTY_CONTENT,
     editorProps: { attributes: { class: 'page', spellcheck: 'true' } },
