@@ -12,6 +12,7 @@ import {
 import { contentWidth } from '../lib/insertPosition'
 import { useResize } from './useResize'
 import { useMove } from './useMove'
+import { ChartSeriesLayer } from './ChartSeriesLayer'
 
 const INK = '#1d2330'
 
@@ -122,6 +123,9 @@ export function ChartView({ node, updateAttributes, selected, editor, getPos }: 
         {a.axisCount === 3 && (
           <text x={xEnd - 8} y={top - 14} textAnchor="end" className="axis-label">{axisTitle(a.axes.y2)}</text>
         )}
+
+        {/* Messwerte */}
+        <ChartSeriesLayer attrs={{ ...a, series: node.attrs.series, legend: node.attrs.legend }} x0={x0} y0={y0} plotW={plotW} plotH={plotH} majorPx={majorPx} />
       </svg>
       <div className="resize-handle" title="Ziehen zum Vergrößern" {...handleProps} />
       {resizing && <div className="size-badge">{Math.round(w)} × {Math.round(h)} px</div>}

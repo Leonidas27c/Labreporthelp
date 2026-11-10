@@ -26,6 +26,9 @@ export const ChartNode = Node.create({
       showMajorLines: { default: DEFAULT_CHART.showMajorLines },
       axisCount: { default: DEFAULT_CHART.axisCount },
       axes: { default: DEFAULT_CHART.axes },
+      // Messreihen (siehe lib/chartData.ts) und Lage der Legende
+      series: { default: [] },
+      legend: { default: 'none' },
       // aus Schritt 2, werden beim Öffnen übernommen
       xLabel: { default: null },
       xUnit: { default: null },
