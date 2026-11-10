@@ -2,7 +2,9 @@ import { useId } from 'react'
 import type { ChartAttrs } from '../lib/chartModel'
 import {
   axisScale,
+  fitPoints,
   formatSig,
+  isOutlier,
   linearFit,
   normalizeLegend,
   normalizeSeries,
@@ -18,7 +20,14 @@ interface Props {
   plotW: number
   plotH: number
   majorPx: number
+  /** angeklickter Messpunkt (nur auf dem Bildschirm hervorgehoben) */
+  selected?: { series: string; index: number } | null
+  /** Messpunkt angeklickt */
+  onPick?: (series: string, index: number, e: React.PointerEvent) => void
 }
+
+/** Rot umkreist: auch im Schwarz-Weiß-Druck als Ausreißer zu erkennen. */
+export const OUTLIER_COLOR = '#c62828'
 
 function Marker({ kind, x, y, color }: { kind: SeriesMarker; x: number; y: number; color: string }) {
   const r = 3.5
@@ -29,7 +38,7 @@ function Marker({ kind, x, y, color }: { kind: SeriesMarker; x: number; y: numbe
 }
 
 /** Messpunkte, Verbindungslinien, Ausgleichsgeraden und Legende eines Diagramms. */
-export function ChartSeriesLayer({ attrs, x0, y0, plotW, plotH, majorPx }: Props) {
+export function ChartSeriesLayer({ attrs, x0, y0, plotW, plotH, majorPx, selected, onPick }: Props) {
   const clipId = `clip-${useId().replace(/[^a-zA-Z0-9]/g, '')}`
   const series = normalizeSeries(attrs.series).filter((s) => s.points.length)
   if (!series.length) return null
@@ -47,7 +56,7 @@ export function ChartSeriesLayer({ attrs, x0, y0, plotW, plotH, majorPx }: Props
     return (pxFromOrigin - a) / (b - a || 1)
   }
 
-  const fits = series.map((s) => (s.fit ? linearFit(s.points) : null))
+  const fits = series.map((s) => (s.fit ? linearFit(fitPoints(s)) : null))
   const legend = normalizeLegend(attrs.legend)
 
   return (
@@ -80,11 +89,44 @@ export function ChartSeriesLayer({ attrs, x0, y0, plotW, plotH, majorPx }: Props
               {line && (
                 <polyline points={sorted.map(([x, y]) => `${px(x)},${py(s, y)}`).join(' ')} fill="none" stroke={s.color} strokeWidth="1.5" />
               )}
-              {marks && s.points.map(([x, y], k) => <Marker key={k} kind={s.marker} x={px(x)} y={py(s, y)} color={s.color} />)}
+              {s.points.map((p, k) => {
+                const cx = px(p[0])
+                const cy = py(s, p[1])
+                const outlier = isOutlier(s, p)
+                const isSel = selected?.series === s.id && selected.index === k
+                return (
+                  <g key={k}>
+                    {marks && <Marker kind={s.marker} x={cx} y={cy} color={s.color} />}
+                    {outlier && (
+                      <g className="chart-outlier">
+                        <circle cx={cx} cy={cy} r="7.5" fill="none" stroke={OUTLIER_COLOR} strokeWidth="1.5" />
+                        {!marks && <circle cx={cx} cy={cy} r="2" fill={OUTLIER_COLOR} />}
+                      </g>
+                    )}
+                    {isSel && <circle className="chart-point-selection" cx={cx} cy={cy} r="11" fill="none" />}
+                  </g>
+                )
+              })}
             </g>
           )
         })}
       </g>
+      {onPick && (
+        <g className="chart-hit">
+          {series.map((s) =>
+            s.points.map(([x, y], k) => {
+              const cx = px(x)
+              const cy = py(s, y)
+              if (cx < x0 - 5 || cx > x0 + plotW + 5 || cy < top - 5 || cy > y0 + 5) return null
+              return (
+                <circle key={`${s.id}-${k}`} cx={cx} cy={cy} r="8" fill="transparent" onPointerDown={(e) => onPick(s.id, k, e)}>
+                  <title>{`${s.name || 'Messpunkt'}: x = ${formatSig(x, 6)}, y = ${formatSig(y, 6)}${isOutlier(s, [x, y]) ? ' (Ausreißer)' : ''} – anklicken zum Bearbeiten`}</title>
+                </circle>
+              )
+            }),
+          )}
+        </g>
+      )}
       {legend !== 'none' && <Legend series={series} fits={fits} x0={x0} y0={y0} plotW={plotW} plotH={plotH} position={legend} />}
     </g>
   )
@@ -107,7 +149,7 @@ function Legend({
   plotH: number
   position: string
 }) {
-  const rows: { s: ChartSeries; text: string; fitLine: boolean }[] = []
+  const rows: { s: ChartSeries | null; text: string; fitLine: boolean }[] = []
   series.forEach((s, i) => {
     rows.push({ s, text: s.name || `Messreihe ${i + 1}`, fitLine: false })
     const f = fits[i]
@@ -116,6 +158,12 @@ function Legend({
       rows.push({ s, text: `y = ${formatSig(f.m)}·x ${sign} ${formatSig(Math.abs(f.b))}  (R² = ${formatSig(f.r2, 4)})`, fitLine: true })
     }
   })
+  // Eine gemeinsame Zeile für alle Ausreißer
+  const withOutliers = series.filter((s) => s.points.some((p) => isOutlier(s, p)))
+  if (withOutliers.length) {
+    const excluded = withOutliers.some((s) => s.fit)
+    rows.push({ s: null, text: excluded ? 'Ausreißer (nicht in Ausgleichsgerade)' : 'Ausreißer', fitLine: false })
+  }
   const lineH = 15
   // Breite grob aus der Textlänge schätzen (11 px Schrift)
   const w = Math.min(plotW - 8, 30 + Math.max(...rows.map((r) => r.text.length)) * 6.1)
@@ -129,7 +177,9 @@ function Legend({
         const cy = top + 4 + lineH * k + lineH / 2
         return (
           <g key={k}>
-            {r.fitLine ? (
+            {!r.s ? (
+              <circle cx={left + 14} cy={cy} r="5" fill="none" stroke={OUTLIER_COLOR} strokeWidth="1.5" />
+            ) : r.fitLine ? (
               <line x1={left + 6} y1={cy} x2={left + 22} y2={cy} stroke={r.s.color} strokeWidth="1.2" strokeDasharray="4 3" />
             ) : (
               <>
