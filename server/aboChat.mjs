@@ -8,7 +8,6 @@ import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { connectClaudeDesktop, desktopSnippet } from './desktopConfig.mjs'
-import { findMarkitdown, toMarkdown } from './markitdown.mjs'
 
 const WORK_DIR = join(tmpdir(), 'labreporthelp-chat')
 const MODELS = new Set(['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1'])
@@ -39,6 +38,9 @@ Die Person schreibt gerade ein Dokument und bittet dich im Chat um Hilfe. Mit je
 
 So arbeitest du:
 - Wenn die Person eine Tabelle, ein Diagrammfeld oder Text haben möchte, füge es ins Dokument ein, statt es nur im Chat zu zeigen. Eingefügt wird an der Stelle, an der der Cursor steht.
+- Du kannst vorhandene Inhalte auch löschen, ersetzen, umformulieren und umsortieren (delete_blocks, replace_block, replace_text, move_blocks). Wenn die Person das möchte, mach es direkt, statt sie zu bitten, es selbst zu tun. Mit after fügst du neue Inhalte gezielt hinter einem bestimmten Block ein.
+- Alle Blocknummern in einer Antwort beziehen sich auf den Dokumentinhalt, den du mit dieser Nachricht bekommen hast. Sie bleiben gültig, auch wenn vorherige Aktionen Blöcke löschen, einfügen oder verschieben. Neu eingefügte Blöcke haben noch keine Nummer.
+- Angehängte Dateien (z. B. eine Versuchsanleitung) liegen im Arbeitsordner; lies sie mit dem Werkzeug Read. Entnimm ihnen die nötigen Angaben: welche Messgrößen, Einheiten, Messbereiche, Anzahl der Messungen, welche Diagramme mit welchen Achsen verlangt sind. Lege daraus passende Tabellen und Diagrammfelder an und nenne kurz, worauf du dich in der Datei stützt.
 - Tabellen: sinnvolle Spaltenköpfe mit Einheit in eckigen Klammern, z. B. „Zeit t [s]“. Zahlen im deutschen Format mit Komma. Erfinde keine Messwerte; wenn Werte fehlen, lege leere Zellen an.
 - Diagrammfelder sind leere Koordinatensysteme (Millimeterpapier) zum Einzeichnen. Messpunkte kann das Programm noch nicht zeichnen; sag das kurz, falls danach gefragt wird. Wähle Achsenbereiche, die zu den Daten passen.
 - Seitenaufteilung: Eine A4-Seite hat etwa 24 cm nutzbare Höhe (ca. 930 px). Das Programm schiebt Tabellen und Diagramme, die nicht mehr ganz auf die Seite passen, automatisch auf die nächste Seite, und Überschriften wandern mit ihrem Inhalt mit. Im Dokumentinhalt markiert „--- Seite N ---“ die Seitenwechsel. Plane so, dass das Ergebnis ordentlich aussieht: Diagramme meist 250–400 px hoch; zwei Diagramme passen zusammen auf eine Seite, wenn jedes höchstens ca. 400 px hoch ist. Sehr lange Tabellen (mehr als ca. 30 Zeilen) lieber sinnvoll auf mehrere Tabellen aufteilen. Vor jede Tabelle und jedes Diagramm gehört ein kurzer Satz Text, der sie einführt.
@@ -184,18 +186,6 @@ async function saveFiles(files) {
   return { dir, names }
 }
 
-/** Datei aus dem Browser mit markitdown in Markdown umwandeln. */
-async function markdown(req, res) {
-  let body
-  try {
-    body = JSON.parse(await readBody(req))
-  } catch {
-    return send(res, 400, { error: 'Ungültige Anfrage.' })
-  }
-  if (typeof body.name !== 'string' || typeof body.data !== 'string') return send(res, 400, { error: 'Ungültige Anfrage.' })
-  send(res, 200, await toMarkdown(body.name, Buffer.from(body.data, 'base64')))
-}
-
 async function chat(req, res) {
   let body
   try {
@@ -259,7 +249,7 @@ export function middleware(req, res, next) {
   const url = req.url?.split('?')[0]
   // Nur Anfragen von dieser Seite selbst annehmen (Schutz vor fremden Webseiten)
   const origin = req.headers.origin
-  if ((url?.startsWith('/api/abo/') || url?.startsWith('/api/desktop/') || url?.startsWith('/api/markitdown')) && origin && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+  if ((url?.startsWith('/api/abo/') || url?.startsWith('/api/desktop/')) && origin && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
     return send(res, 403, { error: 'Nicht erlaubt.' })
   }
   if (url === '/api/abo/status' && req.method === 'GET') return void status(res).catch((e) => send(res, 500, { error: String(e) }))
@@ -277,10 +267,6 @@ export function middleware(req, res, next) {
       return send(res, 200, { ok: false, files: [], messages: [`Fehler: ${e}`] })
     }
   }
-  if (url === '/api/markitdown/status' && req.method === 'GET') {
-    return void findMarkitdown().then((m) => send(res, 200, m ? { available: true, version: m.version } : { available: false }))
-  }
-  if (url === '/api/markitdown' && req.method === 'POST') return void markdown(req, res).catch((e) => send(res, 500, { error: String(e) }))
   if (url === '/api/abo/chat' && req.method === 'POST') return void chat(req, res).catch((e) => send(res, 500, { error: String(e) }))
   next()
 }

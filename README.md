@@ -54,13 +54,6 @@ Einrichtung von Hand:
 - Dateien anhängen (📎 oder hineinziehen): PDF, Word (.docx), PowerPoint (.pptx), Bilder, Text.
   Z. B. die Versuchsanleitung hochladen und „Erstelle daraus die Messwerttabellen und Diagramme“ schreiben.
   Alte Formate (.doc, .ppt) bitte vorher als .docx/.pptx oder PDF speichern.
-- **markitdown**: Angehängte PDF-, Word-, PowerPoint-, Excel- (.xlsx) und HTML-Dateien werden vorher mit
-  [Microsoft markitdown](https://github.com/microsoft/markitdown) in Markdown umgewandelt. Überschriften, Listen und
-  Tabellen der Versuchsanleitung bleiben so erhalten, und Claude liest weniger, aber besser gegliederten Text.
-  Bei PDFs bekommt Claude zusätzlich das Original, falls Abbildungen oder Schaltskizzen gebraucht werden.
-  Im Chat steht dann am Anhang z. B. „PDF → Markdown“. Im Windows-Paket ist markitdown schon dabei;
-  aus dem Quellcode richtet `install.bat` es ein (oder von Hand: Python 3.10+ installieren, dann `npm run markitdown-setup`).
-  Fehlt markitdown, liest die App die Dateien wie bisher selbst (Excel geht dann nicht).
 - Claude fügt an der Cursorposition Tabellen, Diagrammfelder und Text ein und kennt den Dokumentinhalt
 - Technisch: Die App startet auf deinem Rechner Claude Code, das mit deinem Claude-Konto angemeldet ist.
   Gezählt wird deine normale Abo-Nutzung (Pro oder Max).
@@ -118,7 +111,6 @@ Für Entwickler: Ein neues Release entsteht, wenn ein Tag wie `v0.1.0` gepusht w
    z. B. nach `Dokumente\Labreporthelp`.
 2. Im entpackten Ordner **`install.bat`** doppelklicken. Das Skript
    - installiert Node.js und Claude Code, falls sie fehlen,
-   - installiert Python (falls nötig) und markitdown in den Ordner `.venv`,
    - richtet das Programm ein,
    - öffnet die Anmeldung bei Claude (dein Konto mit Pro oder Max),
    - legt eine Verknüpfung „Labreporthelp“ auf dem Desktop an.

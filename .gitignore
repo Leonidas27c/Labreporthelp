@@ -24,6 +24,6 @@ dist-ssr
 *.sw?
 release-out
 
-# Python mit markitdown (npm run markitdown-setup)
+# Reste der früheren markitdown-Einrichtung (Ordner kann gelöscht werden)
 .venv
 __pycache__

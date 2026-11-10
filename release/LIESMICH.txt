@@ -39,11 +39,6 @@ War Claude Desktop beim ersten Start schon installiert, ist das bereits
 passiert. Wenn du den Labreporthelp-Ordner verschiebst, die Datei
 "Claude Desktop verbinden.bat" noch einmal ausführen.
 
-Versuchsanleitungen anhängen: Im Chat (✦ Claude) mit 📎 eine PDF-, Word-,
-PowerPoint- oder Excel-Datei anhängen. Sie wird vorher mit markitdown
-(liegt im Ordner "python") in Markdown umgewandelt, damit Claude
-Überschriften und Tabellen sauber erkennt.
-
 Neu bei Claude anmelden: "Einrichtung wiederholen.bat" doppelklicken.
 
 Deine Dokumente: "Speichern" legt eine Datei zum Weiterbearbeiten an.

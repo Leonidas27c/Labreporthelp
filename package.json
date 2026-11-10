@@ -9,8 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "claude-setup": "node mcp/print-config.mjs",
-    "mcp": "node mcp/server.mjs",
-    "markitdown-setup": "node scripts/markitdown-setup.mjs"
+    "mcp": "node mcp/server.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.5.0",
