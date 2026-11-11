@@ -7,7 +7,7 @@ function Have($cmd) { [bool](Get-Command $cmd -ErrorAction SilentlyContinue) }
 function Refresh-Path {
   $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
               [Environment]::GetEnvironmentVariable('Path', 'User') + ';' +
-              "$env:USERPROFILE\.local\bin;$env:ProgramFiles\nodejs"
+              "$env:USERPROFILE\.local\bin;$env:ProgramFiles\nodejs;$env:ProgramFiles\Git\cmd"
 }
 
 try {
@@ -28,6 +28,21 @@ try {
     }
   }
   Write-Host "Node.js $(node --version) ist da."
+
+  Step 'Git prüfen (braucht Claude Code unter Windows)'
+  if (-not (Have 'git')) {
+    if (Have 'winget') {
+      Write-Host 'Git wird installiert (kann ein paar Minuten dauern) ...'
+      winget install -e --id Git.Git --silent --accept-source-agreements --accept-package-agreements
+      Refresh-Path
+    }
+    if (Have 'git') { Write-Host 'Git ist installiert.' }
+    else {
+      Write-Host 'Git konnte nicht automatisch installiert werden. Ohne Git funktioniert der Chat über Claude Code nicht.' -ForegroundColor Yellow
+      Write-Host 'Bitte von https://git-scm.com/download/win installieren (alles mit "Next" bestätigen) und install.bat noch einmal starten.'
+      Start-Process 'https://git-scm.com/download/win'
+    }
+  } else { Write-Host 'Git ist da.' }
 
   Step 'Claude Code prüfen (für den Chat über dein Claude-Abo)'
   if (-not (Have 'claude')) {
