@@ -64,6 +64,8 @@ Einrichtung (einmalig):
    irm https://claude.ai/install.ps1 | iex
    ```
    Mac: im Terminal `curl -fsSL https://claude.ai/install.sh | bash`
+   Windows zusätzlich: Claude Code braucht „Git für Windows“ (https://git-scm.com/download/win).
+   `install.bat` installiert beides automatisch mit.
 2. Ein neues Terminal öffnen, `claude` eingeben und mit deinem Claude-Konto anmelden. Danach mit `/exit` beenden.
 3. `npm run dev` (neu) starten. Fertig.
 
