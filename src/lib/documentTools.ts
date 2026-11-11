@@ -410,6 +410,12 @@ function describe(node: PMNode): string[] {
       const data = series.length ? `, Messreihen: ${series.map((x) => `${x.name || 'ohne Namen'} (${x.points?.length ?? 0} Punkte)`).join('; ')}` : ''
       return [`[Diagramm: x = ${ax.x.label} ${ax.x.unit}, y = ${ax.y.label} ${ax.y.unit}${data}]`]
     }
+    case 'image':
+      return [`[Bild${node.attrs.alt ? `: ${node.attrs.alt}` : ''}]`]
+    case 'pageBreak':
+      return ['[Seitenumbruch]']
+    case 'blockquote':
+      return [`> ${node.textContent}`]
     case 'bulletList':
     case 'orderedList': {
       const items: string[] = []

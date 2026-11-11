@@ -67,6 +67,20 @@ Einrichtung (einmalig):
 2. Ein neues Terminal öffnen, `claude` eingeben und mit deinem Claude-Konto anmelden. Danach mit `/exit` beenden.
 3. `npm run dev` (neu) starten. Fertig.
 
+**Textbearbeitung wie in Word**
+- Formatvorlagen (Standard, Überschrift 1–3, Zitat, Code), Schriftart und Schriftgröße
+  (Strg+Umschalt+> / < macht die Schrift eine Stufe größer bzw. kleiner)
+- Hochgestellt (Strg++) und Tiefgestellt (Strg+#), z. B. m² oder H₂O
+- Formatierung löschen (Strg+Leertaste)
+- Einzug vergrößern/verkleinern (Strg+M / Strg+Umschalt+M, in Listen eine Ebene tiefer/höher)
+- Zeilenabstand (1,0 bis 3,0; Standard 1,5), Ausrichtung auch mit Strg+L/E/R/J
+- Links (Strg+K, öffnen mit Strg+Klick)
+- Bilder einfügen: über 🖼, per Strg+V oder durch Hineinziehen; Größe am Griff unten ändern
+- Symbole (Ω): griechische Buchstaben, ±, ≈, °, µ, Å, Pfeile und mehr
+- Manueller Seitenumbruch (Strg+Enter), wird beim Drucken ein echter Umbruch
+- Suchen (Strg+F) und Ersetzen (Strg+H), auch mit Groß-/Kleinschreibung und ganzen Wörtern
+- Wörter und Zeichen unten links unter der Seite (bei Markierung: Anteil der Markierung)
+
 **Schrift und Farben**
 - Schriftfarbe (A) und Textmarker (✎) in der Werkzeugleiste
 - Zwei Paletten: „Wissenschaft klassisch“ (gedeckte, dunkle Töne) und „Okabe-Ito“ (auch bei Farbsehschwäche unterscheidbar), dazu eigene Farben
