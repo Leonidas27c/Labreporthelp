@@ -377,3 +377,20 @@ html, body, #root { margin: 0; height: 100%; }
   #print-root .lab-table { --tbl-line: #000 !important; }
   * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
+
+/* ---------- Einrasten beim Verschieben und Vergrößern ---------- */
+.snap-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+.snap-guide { position: fixed; width: 0; border-left: 1px dashed #e2337a; transform: translateX(-0.5px); }
+.snap-drop {
+  position: fixed; height: 0; border-top: 2px solid var(--accent); transform: translateY(-1px);
+}
+.snap-drop::before, .snap-drop::after {
+  content: ''; position: absolute; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+}
+.snap-drop::before { left: -4px; }
+.snap-drop::after { right: -4px; }
+/* angehobenes Feld folgt der Maus ohne Verzögerung */
+.chart-node.moving, .lab-table.moving {
+  opacity: 0.85; z-index: 5; cursor: grabbing; transition: none;
+  box-shadow: 0 8px 24px rgba(20, 30, 50, 0.18); will-change: transform;
+}

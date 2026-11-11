@@ -15,35 +15,47 @@ export function useResize(
 ) {
   const [live, setLive] = useState<{ width: number; height: number } | null>(null)
   const start = useRef({ x: 0, y: 0, width, height })
+  // Größe nur einmal pro Bild neu berechnen, sonst hängt das Neuzeichnen hinterher
+  const frame = useRef(0)
+  const latest = useRef({ width, height })
 
   const onPointerDown = (e: React.PointerEvent) => {
     e.preventDefault()
     e.stopPropagation()
     start.current = { x: e.clientX, y: e.clientY, width, height }
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    latest.current = { width, height }
     setLive({ width, height })
   }
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!live) return
     const s = start.current
-    setLive({
+    latest.current = {
       width: clamp(s.width + e.clientX - s.x, MIN_SIZE, maxWidth),
       height: Math.max(MIN_SIZE, s.height + e.clientY - s.y),
-    })
+    }
+    if (!frame.current)
+      frame.current = requestAnimationFrame(() => {
+        frame.current = 0
+        setLive(latest.current)
+      })
   }
 
   const onPointerUp = (e: React.PointerEvent) => {
     if (!live) return
     ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
-    onCommit({ width: Math.round(live.width), height: Math.round(live.height) })
+    cancelAnimationFrame(frame.current)
+    frame.current = 0
+    const l = latest.current
+    if (e.type === 'pointerup') onCommit({ width: Math.round(l.width), height: Math.round(l.height) })
     setLive(null)
   }
 
   return {
     size: live ?? { width, height },
     resizing: live !== null,
-    handleProps: { onPointerDown, onPointerMove, onPointerUp },
+    handleProps: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp },
   }
 }
 
