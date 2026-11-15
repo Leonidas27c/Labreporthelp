@@ -78,6 +78,14 @@ Einrichtung (einmalig):
 - Fremde PDFs (oder PDFs aus „Microsoft Print to PDF“) werden als Text übernommen: Überschriften, Absätze, Listen und einfache Tabellen werden erkannt, Diagramme und Bilder nicht. Eingescannte PDFs ohne Text gehen nicht.
 - Tabellen und Diagramme werden nicht von einem Seitenumbruch zerschnitten: passen sie nicht mehr auf die Seite, rutschen sie auf die nächste. Überschriften bleiben nicht allein unten auf der Seite stehen. Beim Drucken wird daraus ein echter Seitenumbruch.
 
+**Als Word-Datei exportieren**
+- „Word“ in der Werkzeugleiste speichert das Dokument als .docx, das sich in Word (und LibreOffice) ohne Fehlermeldung öffnet
+- In Word bearbeitbar bleiben: Text mit Formatierung (fett, kursiv, unterstrichen, durchgestrichen, Farbe, Hervorhebung, Links), Überschriften als Formatvorlagen „Überschrift 1–6“ (Navigationsbereich und Inhaltsverzeichnis funktionieren), Aufzählungen und nummerierte Listen, Zitate, Code, Trennlinien und Ausrichtung
+- Tabellen werden echte Word-Tabellen: Linienart (auch wissenschaftlich mit drei Linien), Farben, Kopfzeile (wiederholt sich auf jeder Seite), Zeilenstreifen, Spaltenbreiten, Zeilenhöhe, verbundene Zellen. Die Beschriftung „Tabelle 1: …“ bekommt die Word-Nummerierung, damit ein Tabellenverzeichnis geht
+- Formelspalten: die berechneten Werte stehen als Zahlen in der Tabelle, die Formel als Kommentar an der Kopfzelle (Word rechnet sie nicht nach)
+- Diagramme kommen als scharfes Bild in Originalgröße und Ausrichtung (Word hat kein Karopapier-Diagramm mit Ausgleichsgerade und Ausreißern)
+- A4 mit denselben Seitenrändern; Tabellen, Diagramme und Überschriften bleiben wie in der App beim Seitenumbruch zusammen
+
 **Tabellen** (wie Diagramme: beweglich und mit Eigenschaften)
 - „Aufziehen“ → „Tabelle“ fügt eine echte Tabelle mit Kopfzeile ein (Größe passend zum Feld)
 - Griff ✥ oben links: Tabelle verschieben (nach links/rechts und an eine andere Stelle im Text)
@@ -161,6 +169,7 @@ dann wird beim Öffnen aber nur der Text übernommen).
   - `src/components/ChatPanel.tsx` – Chat mit Claude
   - `src/lib/aboChat.ts` – Chat-Anfrage aus der App
   - `server/aboChat.mjs` – startet Claude Code auf deinem Rechner (läuft in `npm run dev` mit)
+  - `src/lib/docxExport.ts` – Export als Word-Datei (.docx)
   - `src/lib/attachments.ts` – Dateien für Claude lesen (PDF, Word, PowerPoint, Bilder)
   - `src/lib/documentTools.ts` – was Claude im Dokument tun kann
   - `mcp/server.mjs` – MCP-Server für Claude Desktop
