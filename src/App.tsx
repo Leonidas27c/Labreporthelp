@@ -11,6 +11,7 @@ import { PageBreaks } from './components/PageBreaks'
 import { printDocument } from './lib/print'
 import { encodeEmbed } from './lib/pdfEmbed'
 import { importPdf } from './lib/pdfImport'
+import { exportDocx } from './lib/docxExport'
 import { DrawLayer } from './components/DrawLayer'
 import { ChartPanel } from './components/ChartPanel'
 import { ChatPanel } from './components/ChatPanel'
@@ -28,6 +29,7 @@ import {
   downloadDocument,
   loadAutosave,
   parseDocument,
+  safeFileName,
   saveAutosave,
 } from './lib/documentFile'
 
@@ -134,6 +136,24 @@ export default function App() {
     window.setTimeout(async () => printDocument(editor.view.dom as HTMLElement, title, await embed), 50)
   }, [editor, title])
 
+  // Als Word-Datei (.docx) exportieren
+  const handleExportDocx = useCallback(async () => {
+    if (!editor) return
+    flash('Word-Datei wird erstellt …')
+    try {
+      const blob = await exportDocx(editor, title)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${safeFileName(title)}.docx`
+      a.click()
+      window.setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      flash('Als Word-Datei exportiert')
+    } catch (err) {
+      window.alert(err instanceof Error ? `Word-Export fehlgeschlagen: ${err.message}` : 'Word-Export fehlgeschlagen.')
+    }
+  }, [editor, title])
+
   // Tastenkürzel Strg+S, Strg+O und Strg+P
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -202,6 +222,7 @@ export default function App() {
         onOpen={handleOpen}
         onSave={handleSave}
         onPrint={handlePrint}
+        onExportDocx={handleExportDocx}
         drawing={drawing}
         onToggleDraw={() => setDrawing((d) => !d)}
         chatOpen={chatOpen}

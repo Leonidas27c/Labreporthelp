@@ -25,13 +25,14 @@ interface ToolbarProps {
   onOpen: () => void
   onSave: () => void
   onPrint: () => void
+  onExportDocx: () => void
   drawing: boolean
   onToggleDraw: () => void
   chatOpen: boolean
   onToggleChat: () => void
 }
 
-export function Toolbar({ editor, onNew, onOpen, onSave, onPrint, drawing, onToggleDraw, chatOpen, onToggleChat }: ToolbarProps) {
+export function Toolbar({ editor, onNew, onOpen, onSave, onPrint, onExportDocx, drawing, onToggleDraw, chatOpen, onToggleChat }: ToolbarProps) {
   // Aktiven Zustand der Buttons bei jeder Änderung neu berechnen
   const s = useEditorState({
     editor,
@@ -73,6 +74,7 @@ export function Toolbar({ editor, onNew, onOpen, onSave, onPrint, drawing, onTog
         <button onClick={onOpen} title="Dokument oder PDF öffnen (Strg+O). Mit Labreporthelp erstellte PDFs öffnen sich wieder vollständig bearbeitbar.">Öffnen</button>
         <button onClick={onSave} title="Dokument speichern (Strg+S), zum späteren Weiterbearbeiten">Speichern</button>
         <button onClick={onPrint} title="Drucken oder als PDF speichern (Strg+P). Die PDF lässt sich später über „Öffnen“ wieder bearbeiten.">Drucken / PDF</button>
+        <button onClick={onExportDocx} title="Als Word-Datei (.docx) exportieren. Text, Überschriften, Listen und Tabellen bleiben in Word bearbeitbar, Diagramme kommen als Bild.">Word</button>
       </div>
       <div className="group">
         <button disabled={!s.canUndo} onClick={() => chain().undo().run()} title="Rückgängig (Strg+Z)">↶</button>
