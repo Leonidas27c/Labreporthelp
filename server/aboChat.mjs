@@ -3,10 +3,11 @@
 // Claude Code ist mit dem Claude-Konto angemeldet, deshalb läuft alles über
 // das Abo und es wird kein API-Schlüssel gebraucht.
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { homedir, tmpdir } from 'node:os'
+import { delimiter, dirname, join } from 'node:path'
 import { connectClaudeDesktop, desktopSnippet } from './desktopConfig.mjs'
 
 const WORK_DIR = join(tmpdir(), 'labreporthelp-chat')
@@ -76,6 +77,44 @@ function send(res, status, data) {
   res.end(JSON.stringify(data))
 }
 
+/** Sucht die bash.exe von Git für Windows (ohne sie startet Claude Code unter Windows nicht). */
+function findGitBash(pathDirs) {
+  const fromEnv = process.env.CLAUDE_CODE_GIT_BASH_PATH
+  if (fromEnv && existsSync(fromEnv)) return fromEnv
+  const candidates = []
+  // Wie Claude Code selbst: neben einem git.exe im PATH nachsehen (…\Git\cmd\git.exe → …\Git\bin\bash.exe)
+  for (const dir of pathDirs) {
+    if (dir && existsSync(join(dir, 'git.exe'))) candidates.push(join(dirname(dir), 'bin', 'bash.exe'), join(dir, 'bash.exe'))
+  }
+  for (const base of [process.env.ProgramFiles, process.env['ProgramFiles(x86)'], process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, 'Programs')]) {
+    if (base) candidates.push(join(base, 'Git', 'bin', 'bash.exe'))
+  }
+  return candidates.find((c) => existsSync(c)) ?? null
+}
+
+/**
+ * Umgebung für Claude Code. Unter Windows kommen die üblichen Installationsordner von Claude Code und
+ * Git in den PATH, auch wenn das Fenster, aus dem die App gestartet wurde, sie noch nicht kennt
+ * (z. B. direkt nach der Installation oder bei `npm run dev` aus einem älteren Terminal).
+ */
+function claudeEnv() {
+  const env = { ...process.env }
+  // Ein gesetzter API-Schlüssel würde nach Verbrauch abrechnen statt über das Abo
+  delete env.ANTHROPIC_API_KEY
+  delete env.ANTHROPIC_AUTH_TOKEN
+  if (process.platform !== 'win32') return env
+  // Unter Windows heißt die Variable oft „Path“; nur eine Schreibweise behalten
+  const key = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') ?? 'Path'
+  const dirs = String(env[key] ?? '').split(delimiter)
+  const extra = [join(homedir(), '.local', 'bin'), process.env.ProgramFiles && join(process.env.ProgramFiles, 'Git', 'cmd'), process.env.APPDATA && join(process.env.APPDATA, 'npm')]
+  for (const d of extra) if (d && !dirs.some((x) => x.toLowerCase() === d.toLowerCase())) dirs.push(d)
+  for (const k of Object.keys(env)) if (k.toUpperCase() === 'PATH') delete env[k]
+  env.Path = dirs.join(delimiter)
+  const bash = findGitBash(dirs)
+  if (bash) env.CLAUDE_CODE_GIT_BASH_PATH = bash
+  return env
+}
+
 /** Startet `claude` und liefert stdout/stderr. Die Eingabe kommt über stdin (keine Probleme mit Anführungszeichen). */
 function runClaude(args, input, cwd) {
   if (process.platform !== 'win32') return spawnClaude('claude', args, input, cwd)
@@ -90,10 +129,7 @@ function winQuote(a) {
 
 function spawnClaude(command, args, input, cwd) {
   return new Promise((resolve) => {
-    const env = { ...process.env }
-    // Ein gesetzter API-Schlüssel würde nach Verbrauch abrechnen statt über das Abo
-    delete env.ANTHROPIC_API_KEY
-    delete env.ANTHROPIC_AUTH_TOKEN
+    const env = claudeEnv()
     let child
     try {
       child = spawn(command, command === 'claude' && process.platform === 'win32' ? args.map(winQuote) : args, {
@@ -121,6 +157,9 @@ function spawnClaude(command, args, input, cwd) {
       // Unter Windows meldet die Shell ein fehlendes Programm mit Code 9009
       resolve({ code, stdout, stderr, notFound: code === 9009 || /not recognized|nicht erkannt|command not found/i.test(stderr) })
     })
+    // Beendet sich Claude Code sofort (z. B. mit einer Fehlermeldung), darf das Schreiben der Eingabe
+    // nicht den ganzen Server abstürzen lassen (EPIPE); die Meldung kommt über stderr/close.
+    child.stdin.on('error', () => {})
     child.stdin.end(input)
   })
 }
@@ -128,6 +167,11 @@ function spawnClaude(command, args, input, cwd) {
 const NOT_INSTALLED =
   'Claude Code ist auf diesem Rechner nicht installiert. Einmalig installieren (siehe README, Abschnitt „Chat über das Abo“), ' +
   'dann im Terminal `claude` starten und mit deinem Claude-Konto anmelden. Danach `npm run dev` neu starten.'
+
+const NO_GIT =
+  'Claude Code braucht unter Windows „Git für Windows“, das auf diesem Rechner fehlt. Bitte von https://git-scm.com/download/win installieren ' +
+  '(alles mit „Weiter“ bestätigen) und Labreporthelp danach neu starten. Alternativ install.bat noch einmal ausführen, das installiert Git mit.'
+const GIT_HINT = /git-bash|git bash|CLAUDE_CODE_GIT_BASH_PATH/i
 
 const NOT_LOGGED_IN = 'Du bist bei Claude noch nicht angemeldet. Klicke auf „Bei Claude anmelden“.'
 const NO_PLAN =
@@ -138,6 +182,7 @@ const LOGIN_HINT = /not logged in|\/login|log ?in|authenticat|oauth|credential|a
 async function status(res) {
   const r = await runClaude(['--version'], '', tmpdir())
   if (r.notFound || r.code !== 0) return send(res, 200, { installed: false, message: NOT_INSTALLED })
+  if (process.platform === 'win32' && !claudeEnv().CLAUDE_CODE_GIT_BASH_PATH) return send(res, 200, { installed: false, message: NO_GIT })
   let loggedIn = null
   const a = await runClaude(['auth', 'status', '--json'], '', tmpdir())
   try {
@@ -156,6 +201,7 @@ function login(res) {
         shell: true,
         detached: true,
         stdio: 'ignore',
+        env: claudeEnv(),
       }).unref()
     } else if (process.platform === 'darwin') {
       spawn('osascript', ['-e', 'tell application "Terminal" to do script "claude auth login"', '-e', 'tell application "Terminal" to activate'], {
@@ -228,12 +274,14 @@ async function chat(req, res) {
     out = JSON.parse(r.stdout)
   } catch {
     const detail = (r.stderr || r.stdout).trim().slice(0, 500)
+    if (GIT_HINT.test(detail)) return send(res, 200, { error: NO_GIT })
     if (PLAN_HINT.test(detail)) return send(res, 200, { error: NO_PLAN, needsDesktop: true })
     if (LOGIN_HINT.test(detail)) return send(res, 200, { error: NOT_LOGGED_IN, needsLogin: true })
     return send(res, 200, { error: `Claude Code hat nicht geantwortet.${detail ? ` (${detail})` : ''}` })
   }
   if (out.is_error) {
     const msg = String(out.result || 'Claude Code meldet einen Fehler.')
+    if (GIT_HINT.test(msg)) return send(res, 200, { error: NO_GIT })
     if (PLAN_HINT.test(msg)) return send(res, 200, { error: NO_PLAN, needsDesktop: true })
     if (LOGIN_HINT.test(msg)) return send(res, 200, { error: NOT_LOGGED_IN, needsLogin: true })
     return send(res, 200, { error: msg, sessionId: out.session_id })
