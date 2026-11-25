@@ -4,7 +4,8 @@ import type { Node as PMNode } from '@tiptap/pm/model'
 import { NodeSelection } from '@tiptap/pm/state'
 import type { NodeView, ViewMutationRecord } from '@tiptap/pm/view'
 import { contentWidth } from '../lib/insertPosition'
-import { moveBlock } from '../lib/moveBlock'
+import { BlockDrag } from '../lib/blockDrag'
+import { SnapOverlay, snapContext, snapRight, type SnapContext } from '../lib/snap'
 import {
   DEFAULT_TABLE,
   MIN_COL_WIDTH,
@@ -173,10 +174,9 @@ class LabTableView implements NodeView {
     view.dispatch(state.tr.setSelection(NodeSelection.create(state.doc, pos)))
   }
 
-  /** Verschieben am Griff oben links: wie beim Diagramm. */
+  /** Verschieben am Griff oben links: wie beim Diagramm (mit Einrasten, siehe BlockDrag). */
   private setupMove() {
-    let start: { x: number; y: number; top: number } | null = null
-    let delta: { dx: number; dy: number } | null = null
+    let drag: BlockDrag | null = null
     const g = this.grip
     g.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return
@@ -184,30 +184,14 @@ class LabTableView implements NodeView {
       e.stopPropagation()
       this.select()
       g.setPointerCapture(e.pointerId)
-      start = { x: e.clientX, y: e.clientY, top: this.dom.getBoundingClientRect().top }
-      delta = null
+      drag = new BlockDrag(this.editor, this.dom, this.getPos, e)
     })
-    g.addEventListener('pointermove', (e) => {
-      if (!start) return
-      const dx = e.clientX - start.x
-      const dy = e.clientY - start.y
-      if (!delta && Math.hypot(dx, dy) < 4) return
-      delta = { dx, dy }
-      this.dom.classList.add('moving')
-      this.dom.style.transform = `translate(${dx}px, ${dy}px)`
-    })
+    g.addEventListener('pointermove', (e) => drag?.move(e))
     const end = (e: PointerEvent) => {
-      if (!start) return
-      const s = start
-      const d = delta
-      start = null
-      delta = null
+      const d = drag
+      drag = null
       if (g.hasPointerCapture(e.pointerId)) g.releasePointerCapture(e.pointerId)
-      this.dom.classList.remove('moving')
-      this.dom.style.transform = ''
-      const pos = this.pos()
-      if (!d || pos === null || e.type === 'pointercancel') return
-      moveBlock(this.editor, pos, this.table.getBoundingClientRect().width, d.dx, d.dy, s.top)
+      d?.end(e.type === 'pointerup')
     }
     g.addEventListener('pointerup', end)
     g.addEventListener('pointercancel', end)
@@ -215,7 +199,9 @@ class LabTableView implements NodeView {
 
   /** Größe ändern am Griff unten rechts: Spalten wachsen gleichmäßig mit, die Höhe ergibt die Zeilenhöhe. */
   private setupResize() {
-    let start: { x: number; y: number; w: number; h: number; widths: number[]; rows: number; maxW: number } | null = null
+    let start: { x: number; y: number; w: number; h: number; left: number; widths: number[]; rows: number; maxW: number } | null = null
+    let ctx: SnapContext | null = null
+    let overlay: SnapOverlay | null = null
     let live: { w: number; h: number } | null = null
     const h = this.handle
     h.addEventListener('pointerdown', (e) => {
@@ -226,7 +212,10 @@ class LabTableView implements NodeView {
       e.stopPropagation()
       h.setPointerCapture(e.pointerId)
       const box = this.table.getBoundingClientRect()
+      ctx = snapContext(this.editor, this.dom)
+      overlay = new SnapOverlay(ctx)
       start = {
+        left: box.left - ctx.contentLeft,
         x: e.clientX,
         y: e.clientY,
         w: box.width,
@@ -243,7 +232,13 @@ class LabTableView implements NodeView {
     h.addEventListener('pointermove', (e) => {
       if (!start) return
       const minW = MIN_COL_WIDTH * start.widths.length
-      const w = Math.min(Math.max(start.w + e.clientX - start.x, minW), Math.max(minW, start.maxW))
+      let w = Math.min(Math.max(start.w + e.clientX - start.x, minW), Math.max(minW, start.maxW))
+      // rechte Kante rastet am Seitenrand, an der Mitte und an anderen Feldern ein (Alt: frei)
+      if (ctx) {
+        const snap = snapRight(ctx, start.left, start.left + w, !e.altKey)
+        w = Math.max(minW, snap.right - start.left)
+        overlay?.guides(snap.guides)
+      }
       const hh = Math.max(start.rows * 20, start.h + e.clientY - start.y)
       live = { w, h: hh }
       // nur vorläufig zeichnen, gespeichert wird beim Loslassen
@@ -263,6 +258,9 @@ class LabTableView implements NodeView {
       start = null
       live = null
       this.busy = false
+      overlay?.remove()
+      overlay = null
+      ctx = null
       if (h.hasPointerCapture(e.pointerId)) h.releasePointerCapture(e.pointerId)
       this.dom.classList.remove('resizing')
       this.badge.remove()

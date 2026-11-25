@@ -53,7 +53,7 @@ export function ChartView({ node, updateAttributes, selected, editor, getPos }: 
     const snapped = snapChartSize(a, s.width, s.height, maxWidth)
     updateAttributes({ width: snapped.width, height: snapped.height })
   })
-  const { moving, moveStyle, moveProps } = useMove(editor, getPos, a.width)
+  const { moving, moveProps } = useMove(editor, getPos)
   const pointSel = usePointSelection()
   const myPos = getPos()
   const selPoint = selected && pointSel && pointSel.pos === myPos ? pointSel : null
@@ -90,7 +90,7 @@ export function ChartView({ node, updateAttributes, selected, editor, getPos }: 
   return (
     <NodeViewWrapper
       className={`chart-node${selected ? ' selected' : ''}${resizing ? ' resizing' : ''}${moving ? ' moving' : ''}`}
-      style={{ width: w, height: h, ...alignStyle(a.align, a.offsetX), ...moveStyle }}
+      style={{ width: w, height: h, ...alignStyle(a.align, a.offsetX) }}
       contentEditable={false}
       draggable={false}
       {...moveProps}
