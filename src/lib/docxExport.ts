@@ -23,6 +23,7 @@ import JSZip from 'jszip'
 import type { Editor, JSONContent } from '@tiptap/react'
 import { normalizeTable, type TableAttrs } from './tableModel'
 import { PAGE_MM } from './print'
+import { INDENT_CM } from '../extensions/TextFormatting'
 
 /* ---------- Maßeinheiten ---------- */
 
@@ -178,6 +179,56 @@ async function collectCharts(editor: Editor): Promise<(ChartImage | null)[]> {
   return out
 }
 
+/** Ein eingefügtes Bild als PNG (Word kennt nicht jedes Format, das der Browser anzeigt). */
+async function imageToPng(src: string): Promise<{ png: Uint8Array; width: number; height: number }> {
+  const img = new window.Image()
+  img.src = src
+  await img.decode()
+  const canvas = document.createElement('canvas')
+  canvas.width = img.naturalWidth
+  canvas.height = img.naturalHeight
+  canvas.getContext('2d')!.drawImage(img, 0, 0)
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
+  if (!blob) throw new Error('Bild konnte nicht umgewandelt werden')
+  return { png: new Uint8Array(await blob.arrayBuffer()), width: img.naturalWidth, height: img.naturalHeight }
+}
+
+/** Alle eingefügten Bilder als PNG, in Dokumentreihenfolge, mit der Größe wie in der App. */
+async function collectImages(editor: Editor): Promise<(ChartImage | null)[]> {
+  const found: Record<string, unknown>[] = []
+  editor.state.doc.descendants((node) => {
+    if (node.type.name === 'image') found.push(node.attrs)
+    return true
+  })
+  const out: (ChartImage | null)[] = []
+  for (const attrs of found) {
+    try {
+      const img = await imageToPng(String(attrs.src ?? ''))
+      const w = Number(attrs.width) || img.width
+      const h = Number(attrs.height) || Math.round((img.height * w) / img.width)
+      out.push({ png: img.png, width: w, height: h, description: String(attrs.alt || attrs.title || 'Bild') })
+    } catch {
+      out.push(null)
+    }
+  }
+  return out
+}
+
+/** Erste Schrift aus einer CSS-Schriftliste, z. B. „Arial, Helvetica, sans-serif“ → „Arial“. */
+function fontName(v: unknown): string | null {
+  if (typeof v !== 'string' || !v.trim()) return null
+  const first = v.split(',')[0].trim().replace(/^['"]|['"]$/g, '')
+  return first && !/^(serif|sans-serif|monospace)$/.test(first) ? first : null
+}
+
+/** CSS-Schriftgröße („12pt“, „16px“) in halben Punkten für Word. */
+function fontHalfPt(v: unknown): number | undefined {
+  if (typeof v !== 'string') return undefined
+  const n = parseFloat(v)
+  if (!(n > 0)) return undefined
+  return Math.round((v.endsWith('px') ? n * 0.75 : n) * 2)
+}
+
 /* ---------- Aufbau des Dokuments ---------- */
 
 interface RunStyle {
@@ -211,10 +262,13 @@ class DocxWriter {
   nums: { id: number; abstract: number; start: number | null; level: number }[] = [{ id: 1, abstract: 0, start: null, level: 0 }]
   private charts: (ChartImage | null)[]
   private chartIndex = 0
+  private images: (ChartImage | null)[]
+  private imageIndex = 0
   private drawingId = 1
 
-  constructor(charts: (ChartImage | null)[]) {
+  constructor(charts: (ChartImage | null)[], images: (ChartImage | null)[] = []) {
     this.charts = charts
+    this.images = images
   }
 
   private rel(type: string, target: string, external = false) {
@@ -233,15 +287,21 @@ class DocxWriter {
     if (m.has('bold') || base?.bold) p.push('<w:b/><w:bCs/>')
     if (m.has('italic')) p.push('<w:i/><w:iCs/>')
     if (m.has('strike')) p.push('<w:strike/>')
-    const color = hexColor(m.get('textStyle')?.color)
+    const ts = m.get('textStyle')
+    const font = fontName(ts?.fontFamily)
+    if (font) p.push(`<w:rFonts w:ascii="${esc(font)}" w:hAnsi="${esc(font)}" w:cs="${esc(font)}"/>`)
+    const color = hexColor(ts?.color)
     if (color) p.push(`<w:color w:val="${color}"/>`)
-    if (base?.sizeHalfPt) p.push(`<w:sz w:val="${base.sizeHalfPt}"/><w:szCs w:val="${base.sizeHalfPt}"/>`)
+    const size = fontHalfPt(ts?.fontSize) ?? base?.sizeHalfPt
+    if (size) p.push(`<w:sz w:val="${size}"/><w:szCs w:val="${size}"/>`)
     if (m.has('underline')) p.push('<w:u w:val="single"/>')
     if (m.has('highlight')) {
       // Beliebige Farbe als Schattierung (Word-Hervorhebung kennt nur 16 grelle Farben)
       const hl = hexColor(m.get('highlight')?.color) ?? 'FFFF00'
       p.push(`<w:shd w:val="clear" w:color="auto" w:fill="${hl}"/>`)
     }
+    if (m.has('subscript')) p.push('<w:vertAlign w:val="subscript"/>')
+    else if (m.has('superscript')) p.push('<w:vertAlign w:val="superscript"/>')
     return p.length ? `<w:rPr>${p.join('')}</w:rPr>` : ''
   }
 
@@ -297,6 +357,11 @@ class DocxWriter {
   }
 
   private paragraph(n: JSONContent, ctx: ParaCtx, extraPPr = '', prefix = '', suffix = '') {
+    // Einzug und Zeilenabstand aus der Absatzformatierung
+    const steps = Number(n.attrs?.indent) || 0
+    if (steps > 0) ctx = { ...ctx, indent: (ctx.indent ?? 0) + Math.round(steps * INDENT_CM * 567) }
+    const lh = parseFloat(String(n.attrs?.lineHeight ?? ''))
+    if (lh > 0 && ctx.spacingAfter === undefined) extraPPr += `<w:spacing w:line="${Math.round(lh * 240)}" w:lineRule="auto"/>`
     return `<w:p>${this.pPr(ctx, n.attrs?.textAlign, extraPPr)}${prefix}${this.inline(n.content, ctx.run)}${suffix}</w:p>`
   }
 
@@ -344,6 +409,10 @@ class DocxWriter {
         return this.chart(n, ctx)
       case 'tablePlaceholder':
         return ''
+      case 'pageBreak':
+        return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'
+      case 'image':
+        return this.picture(this.images[this.imageIndex++], n.attrs?.align, n.attrs?.offsetX, ctx, 'Bild', '[Bild konnte nicht exportiert werden]')
       default:
         // Unbekannter Block: Inhalt übernehmen, statt ihn wegzulassen
         if (n.content?.some((c) => c.type === 'text')) return this.paragraph(n, ctx)
@@ -597,19 +666,21 @@ class DocxWriter {
   /* --- Diagramme --- */
 
   private chart(n: JSONContent, ctx: ParaCtx): string {
-    const img = this.charts[this.chartIndex++]
-    const align = n.attrs?.align
+    return this.picture(this.charts[this.chartIndex++], n.attrs?.align, n.attrs?.offsetX, ctx, 'Diagramm', '[Diagramm konnte nicht exportiert werden]')
+  }
+
+  private picture(img: ChartImage | null | undefined, align: unknown, offsetX: unknown, ctx: ParaCtx, label: string, missing: string): string {
     const jc = align === 'center' ? 'center' : align === 'right' ? 'right' : null
-    const offset = !align ? Math.max(0, Number(n.attrs?.offsetX) || 0) : 0
+    const offset = !align ? Math.max(0, Number(offsetX) || 0) : 0
     const pPr =
       '<w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="120" w:after="120" w:line="240" w:lineRule="auto"/>' +
       (offset || ctx.indent ? `<w:ind w:left="${Math.round(offset * PX_TWIP) + (ctx.indent ?? 0)}"/>` : '') +
       (jc ? `<w:jc w:val="${jc}"/>` : '') +
       '</w:pPr>'
     if (!img) {
-      return `<w:p>${pPr}${this.textRun('[Diagramm konnte nicht exportiert werden]', '<w:rPr><w:i/><w:color w:val="C00000"/></w:rPr>')}</w:p>`
+      return `<w:p>${pPr}${this.textRun(missing, '<w:rPr><w:i/><w:color w:val="C00000"/></w:rPr>')}</w:p>`
     }
-    const name = `chart${this.media.length + 1}.png`
+    const name = `${label === 'Bild' ? 'image' : 'chart'}${this.media.length + 1}.png`
     this.media.push({ name, data: img.png })
     const rid = this.rel('http://schemas.openxmlformats.org/officeDocument/2006/relationships/image', `media/${name}`)
     // Nie breiter als die Seite
@@ -622,7 +693,7 @@ class DocxWriter {
     const drawing =
       `<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">` +
       `<wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/>` +
-      `<wp:docPr id="${id}" name="Diagramm ${id}" descr="${descr}"/>` +
+      `<wp:docPr id="${id}" name="${label} ${id}" descr="${descr}"/>` +
       `<wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>` +
       `<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
       `<pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="${name}" descr="${descr}"/><pic:cNvPicPr><a:picLocks noChangeAspect="1"/></pic:cNvPicPr></pic:nvPicPr>` +
@@ -721,8 +792,13 @@ const SETTINGS_XML =
 /* ---------- Gesamte Datei ---------- */
 
 /** Baut die .docx-Datei aus dem Dokument im Editor. */
-export async function buildDocx(content: JSONContent, title: string, charts: (ChartImage | null)[] = []): Promise<Blob> {
-  const w = new DocxWriter(charts)
+export async function buildDocx(
+  content: JSONContent,
+  title: string,
+  charts: (ChartImage | null)[] = [],
+  images: (ChartImage | null)[] = [],
+): Promise<Blob> {
+  const w = new DocxWriter(charts, images)
   let body = w.blocks(content.content)
   // Das Dokument muss mit einem Absatz enden (sonst hängt Word einen an oder meckert)
   if (!body.endsWith('</w:p>')) body += '<w:p/>'
@@ -805,5 +881,6 @@ export async function buildDocx(content: JSONContent, title: string, charts: (Ch
 /** Exportiert das Dokument im Editor als .docx (Diagramme werden dafür als Bilder gezeichnet). */
 export async function exportDocx(editor: Editor, title: string): Promise<Blob> {
   const charts = await collectCharts(editor)
-  return buildDocx(editor.getJSON(), title, charts)
+  const images = await collectImages(editor)
+  return buildDocx(editor.getJSON(), title, charts, images)
 }
