@@ -87,7 +87,10 @@ function plan(blocks: Block[]): Push[] {
     if (top <= pageStart + 1) continue // steht schon oben auf der Seite
 
     let push = false
-    if (keepTogether(b.node)) {
+    if (i > 0 && blocks[i - 1].node.type.name === 'pageBreak') {
+      // Manueller Seitenumbruch (Strg+Enter): immer auf der nächsten Seite beginnen
+      push = true
+    } else if (keepTogether(b.node)) {
       // Nur verschieben, wenn der Block auf einer leeren Seite auch ganz Platz hat
       push = bottom > pageEnd - reserve && height <= page - reserve
     } else if (isHeading(b.node)) {

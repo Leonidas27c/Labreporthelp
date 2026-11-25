@@ -4,7 +4,16 @@ import { NodeSelection } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
 import TextAlign from '@tiptap/extension-text-align'
 import { TableKit } from '@tiptap/extension-table'
-import { TextStyle, Color } from '@tiptap/extension-text-style'
+import { TextStyle, Color, FontFamily, FontSize } from '@tiptap/extension-text-style'
+import Subscript from '@tiptap/extension-subscript'
+import Superscript from '@tiptap/extension-superscript'
+import { TextFormatting } from './extensions/TextFormatting'
+import { PageBreakNode } from './extensions/PageBreakNode'
+import { ImagePaste, LabImage } from './extensions/ImageInsert'
+import { LinkTools } from './extensions/LinkTools'
+import { SearchReplace } from './extensions/SearchReplace'
+import { FindBar } from './components/FindBar'
+import { WordCount } from './components/WordCount'
 import Highlight from '@tiptap/extension-highlight'
 import { Toolbar } from './components/Toolbar'
 import { PageBreaks } from './components/PageBreaks'
@@ -40,11 +49,14 @@ export default function App() {
   const [drawing, setDrawing] = useState(false)
   const stopDrawing = useCallback(() => setDrawing(false), [])
   const [chatOpen, setChatOpen] = useState(false)
+  // Suchleiste: null = zu, sonst mit oder ohne „Ersetzen“
+  const [find, setFind] = useState<{ replace: boolean; n: number } | null>(null)
+  const openFind = useCallback((replace: boolean) => setFind((f) => ({ replace: replace || (f?.replace ?? false), n: (f?.n ?? 0) + 1 })), [])
   const fileInput = useRef<HTMLInputElement>(null)
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({ link: { openOnClick: false, autolink: true, defaultProtocol: 'https' } }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       TableKit.configure({ table: false, tableCell: false, tableHeader: false }),
       LabTableCell,
@@ -53,6 +65,16 @@ export default function App() {
       TextStyle,
       Color,
       Highlight.configure({ multicolor: true }),
+      FontFamily,
+      FontSize,
+      Subscript,
+      Superscript,
+      TextFormatting,
+      PageBreakNode,
+      LabImage,
+      ImagePaste,
+      LinkTools,
+      SearchReplace,
       ChartNode,
       TablePlaceholderNode,
       TablePlaceholderUpgrade,
@@ -61,7 +83,8 @@ export default function App() {
       TableFill,
     ],
     content: autosaved.current?.content ?? EMPTY_CONTENT,
-    editorProps: { attributes: { class: 'page', spellcheck: 'true' } },
+    // Abstand beim Scrollen zur Auswahl, damit Treffer nicht unter der Suchleiste landen
+    editorProps: { attributes: { class: 'page', spellcheck: 'true' }, scrollMargin: { top: 90, bottom: 40, left: 0, right: 0 }, scrollThreshold: { top: 90, bottom: 40, left: 0, right: 0 } },
   })
 
   // Automatisch im Browser zwischenspeichern, damit nichts verloren geht
@@ -134,7 +157,7 @@ export default function App() {
     window.setTimeout(async () => printDocument(editor.view.dom as HTMLElement, title, await embed), 50)
   }, [editor, title])
 
-  // Tastenkürzel Strg+S, Strg+O und Strg+P
+  // Tastenkürzel Strg+S, Strg+O, Strg+P, Strg+F und Strg+H
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return
@@ -148,11 +171,14 @@ export default function App() {
       } else if (key === 'p') {
         e.preventDefault()
         handlePrint()
+      } else if ((key === 'f' || key === 'h') && !e.shiftKey && !e.altKey) {
+        e.preventDefault()
+        openFind(key === 'h')
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [handleSave, handleOpen, handlePrint])
+  }, [handleSave, handleOpen, handlePrint, openFind])
 
   const desktopConnected = useDesktopBridge(editor)
 
@@ -206,12 +232,15 @@ export default function App() {
         onToggleDraw={() => setDrawing((d) => !d)}
         chatOpen={chatOpen}
         onToggleChat={() => setChatOpen((c) => !c)}
+        onFind={openFind}
       />
       <div className="body">
       <main className="workspace">
+        {find && <FindBar key="find" editor={editor} replace={find.replace} focusToken={find.n} onToggleReplace={() => setFind((f) => f && { ...f, replace: !f.replace })} onClose={() => setFind(null)} />}
         <div className={`page-wrap${drawing ? ' drawing' : ''}`}>
           <EditorContent editor={editor} />
           <PageBreaks editor={editor} />
+          <WordCount editor={editor} />
           <DrawLayer editor={editor} active={drawing} onDone={stopDrawing} />
         </div>
         {drawing && <div className="hint">Feld mit gedrückter linker Maustaste aufziehen · Esc zum Abbrechen</div>}
