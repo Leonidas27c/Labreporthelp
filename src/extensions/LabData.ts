@@ -5,7 +5,7 @@ import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } 
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { TableMap } from '@tiptap/pm/tables'
 import { formatResult, parseNumber, tryCompile, type CompiledFormula } from '../lib/formula'
-import { newId, normalizeSeries, pointsFromGrid, tableGrid } from '../lib/chartData'
+import { hasHeaderRow, newId, normalizeSeries, pointsFromGrid, tableGrid } from '../lib/chartData'
 import { setCellText } from '../lib/tableModel'
 
 /**
@@ -114,11 +114,7 @@ function sync(state: EditorState): Transaction | null {
     const columns = formulaColumns(node)
     const computed = computeGrid(grid, columns)
     if (uid) {
-      let header = node.childCount > 0
-      node.firstChild?.forEach((cell) => {
-        if (cell.type.name !== 'tableHeader') header = false
-      })
-      grids.set(uid, { grid: computed, header })
+      grids.set(uid, { grid: computed, header: hasHeaderRow(node) })
     }
     if (!columns.length) return false
 

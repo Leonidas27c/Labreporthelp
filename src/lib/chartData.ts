@@ -32,6 +32,12 @@ export interface ChartSeries {
   source: SeriesSource | null
   /** Messpunkte [x, y]. Bei verknüpften Reihen eine Kopie aus der Tabelle. */
   points: [number, number][]
+  /**
+   * Als Ausreißer markierte Messpunkte, über ihre Werte [x, y] erkannt (nicht über die
+   * Nummer), damit die Markierung beim Nachführen aus der Tabelle am richtigen Punkt bleibt.
+   * Ausreißer werden hervorgehoben und nicht für die Ausgleichsgerade verwendet.
+   */
+  outliers: [number, number][]
 }
 
 /** Gut unterscheidbare, druckfreundliche Farben (beginnt mit Schwarz). */
@@ -58,11 +64,48 @@ export function normalizeSeries(raw: unknown): ChartSeries[] {
           src && typeof src.table === 'string' && Number.isInteger(src.x) && Number.isInteger(src.y)
             ? { table: src.table, x: src.x as number, y: src.y as number }
             : null,
-        points: Array.isArray(r.points)
-          ? r.points.filter((p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])).map((p) => [p[0], p[1]] as [number, number])
-          : [],
+        points: pointList(r.points),
+        outliers: pointList(r.outliers),
       }
     })
+}
+
+function pointList(raw: unknown): [number, number][] {
+  return Array.isArray(raw)
+    ? raw.filter((p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])).map((p) => [p[0], p[1]] as [number, number])
+    : []
+}
+
+/* ---------- Ausreißer ---------- */
+
+const samePoint = (a: [number, number], b: [number, number]) => a[0] === b[0] && a[1] === b[1]
+
+export function isOutlier(s: ChartSeries, p: [number, number]) {
+  return s.outliers.some((o) => samePoint(o, p))
+}
+
+/** Punkt als Ausreißer markieren oder die Markierung entfernen. */
+export function toggleOutlier(s: ChartSeries, p: [number, number], on: boolean): [number, number][] {
+  const rest = s.outliers.filter((o) => !samePoint(o, p))
+  return on ? [...rest, [p[0], p[1]]] : rest
+}
+
+/** Markierungen, die zu keinem Messpunkt mehr passen, verwerfen. */
+export function liveOutliers(s: ChartSeries) {
+  return s.outliers.filter((o) => s.points.some((p) => samePoint(o, p)))
+}
+
+/** Messpunkte für die Ausgleichsgerade: alle außer den Ausreißern. */
+export function fitPoints(s: ChartSeries) {
+  return s.outliers.length ? s.points.filter((p) => !isOutlier(s, p)) : s.points
+}
+
+/** Einen Messpunkt ändern; ein Ausreißer bleibt dabei ein Ausreißer. */
+export function replacePoint(s: ChartSeries, index: number, p: [number, number]): Pick<ChartSeries, 'points' | 'outliers'> {
+  const old = s.points[index]
+  const points = s.points.map((q, i) => (i === index ? p : q))
+  const outliers = old && isOutlier(s, old) ? toggleOutlier({ ...s, outliers: toggleOutlier(s, old, false) }, p, true) : s.outliers
+  return { points, outliers }
 }
 
 export function normalizeLegend(v: unknown): LegendPosition {
@@ -85,13 +128,27 @@ export function tableGrid(table: PMNode): string[][] {
 
 /** Messpunkte aus zwei Spalten: nur Zeilen, in denen beide Zellen eine Zahl enthalten. */
 export function pointsFromGrid(grid: string[][], x: number, y: number): [number, number][] {
-  const pts: [number, number][] = []
-  for (const row of grid) {
+  return pointRowsFromGrid(grid, x, y).map((r) => r.point)
+}
+
+/** Wie pointsFromGrid, zusätzlich mit der Zeile im Raster, aus der jeder Punkt stammt. */
+export function pointRowsFromGrid(grid: string[][], x: number, y: number) {
+  const pts: { point: [number, number]; row: number }[] = []
+  grid.forEach((row, r) => {
     const vx = parseNumber(row[x] ?? '')
     const vy = parseNumber(row[y] ?? '')
-    if (vx !== null && vy !== null) pts.push([vx, vy])
-  }
+    if (vx !== null && vy !== null) pts.push({ point: [vx, vy], row: r })
+  })
   return pts
+}
+
+/** Ob die erste Zeile der Tabelle nur aus Kopfzellen besteht (dann gehört sie nicht zu den Messwerten). */
+export function hasHeaderRow(table: PMNode) {
+  let header = table.childCount > 0
+  table.firstChild?.forEach((cell) => {
+    if (cell.type.name !== 'tableHeader') header = false
+  })
+  return header
 }
 
 export interface DocTable {

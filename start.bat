@@ -1,7 +1,7 @@
 @echo off
 rem Labreporthelp starten und im Browser oeffnen. Fenster offen lassen, solange du arbeitest.
 cd /d "%~dp0"
-set "PATH=%USERPROFILE%\.local\bin;%ProgramFiles%\nodejs;%PATH%"
+set "PATH=%USERPROFILE%\.local\bin;%ProgramFiles%\nodejs;%ProgramFiles%\Git\cmd;%PATH%"
 where node >nul 2>nul
 if errorlevel 1 (
   echo Node.js fehlt. Bitte zuerst install.bat ausfuehren.

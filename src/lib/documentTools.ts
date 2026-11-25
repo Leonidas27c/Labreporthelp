@@ -406,10 +406,17 @@ function describe(node: PMNode): string[] {
     }
     case 'chart': {
       const ax = node.attrs.axes ?? DEFAULT_CHART.axes
-      const series = Array.isArray(node.attrs.series) ? (node.attrs.series as { name?: string; points?: unknown[] }[]) : []
-      const data = series.length ? `, Messreihen: ${series.map((x) => `${x.name || 'ohne Namen'} (${x.points?.length ?? 0} Punkte)`).join('; ')}` : ''
+      const series = Array.isArray(node.attrs.series) ? (node.attrs.series as { name?: string; points?: unknown[]; outliers?: unknown[] }[]) : []
+      const outl = (x: { outliers?: unknown[] }) => (x.outliers?.length ? `, ${x.outliers.length} als Ausreißer markiert` : '')
+      const data = series.length ? `, Messreihen: ${series.map((x) => `${x.name || 'ohne Namen'} (${x.points?.length ?? 0} Punkte${outl(x)})`).join('; ')}` : ''
       return [`[Diagramm: x = ${ax.x.label} ${ax.x.unit}, y = ${ax.y.label} ${ax.y.unit}${data}]`]
     }
+    case 'image':
+      return [`[Bild${node.attrs.alt ? `: ${node.attrs.alt}` : ''}]`]
+    case 'pageBreak':
+      return ['[Seitenumbruch]']
+    case 'blockquote':
+      return [`> ${node.textContent}`]
     case 'bulletList':
     case 'orderedList': {
       const items: string[] = []

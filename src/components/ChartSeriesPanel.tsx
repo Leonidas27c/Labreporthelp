@@ -7,6 +7,7 @@ import {
   documentTables,
   fitAxesToData,
   guessColumn,
+  hasHeaderRow,
   newId,
   normalizeLegend,
   normalizeSeries,
@@ -23,6 +24,8 @@ import {
 import { columnLetter } from '../lib/formula'
 import { splitUnit } from '../lib/tableModel'
 import { computeGrid, formulaColumns } from '../extensions/LabData'
+import { usePointSelection } from '../lib/chartSelection'
+import { ChartPointsTable } from './ChartPointsTable'
 
 export type ChartPatch = { series?: ChartSeries[]; legend?: LegendPosition; axes?: ChartAttrs['axes'] }
 
@@ -56,7 +59,7 @@ const colName = (headers: string[], i: number) => `${columnLetter(i)} – ${head
 /** Werte einer Tabelle mit ausgerechneten Formelspalten. */
 function computedPoints(t: DocTable, x: number, y: number) {
   const grid = computeGrid(tableGrid(t.node), formulaColumns(t.node))
-  return pointsFromGrid(grid.slice(1), x, y)
+  return pointsFromGrid(hasHeaderRow(t.node) ? grid.slice(1) : grid, x, y)
 }
 
 /** Abschnitt „Messwerte“ in der Diagramm-Seitenleiste. */
@@ -64,6 +67,14 @@ export function SeriesSection({ editor, pos, chart, rawSeries, legend, update }:
   const series = normalizeSeries(rawSeries)
   const [active, setActive] = useState(0)
   const [manualText, setManualText] = useState<{ id: string; text: string } | null>(null)
+  const pointSel = usePointSelection()
+  // Punkt im Diagramm angeklickt: dessen Messreihe zeigen
+  const pickedSeries = pointSel && pointSel.pos === pos ? series.findIndex((x) => x.id === pointSel.series) : -1
+  const [seenSel, setSeenSel] = useState(pointSel)
+  if (pointSel !== seenSel) {
+    setSeenSel(pointSel)
+    if (pickedSeries >= 0) setActive(pickedSeries)
+  }
   const index = Math.min(active, series.length - 1)
   const s = index >= 0 ? series[index] : null
   const tables = documentTables(editor.state.doc)
@@ -101,6 +112,7 @@ export function SeriesSection({ editor, pos, chart, rawSeries, legend, update }:
       fit: false,
       source: null,
       points: [],
+      outliers: [],
     }
     const before = tables.filter((t) => t.pos < pos)
     const t = before[before.length - 1] ?? tables[0]
@@ -272,6 +284,7 @@ export function SeriesSection({ editor, pos, chart, rawSeries, legend, update }:
             <input type="checkbox" checked={s.fit} onChange={(e) => patch({ fit: e.target.checked })} />
             Ausgleichsgerade (lineare Regression)
           </label>
+          <ChartPointsTable editor={editor} pos={pos} series={series} index={index} linked={linked} selection={pointSel} setSeries={setSeries} />
           <button className="danger" onClick={remove}>Messreihe entfernen</button>
         </div>
       )}
